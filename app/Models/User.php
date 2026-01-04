@@ -6,21 +6,24 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
 
     protected $fillable = [
-        'username',
+        'full_name',
         'email',
         'password',
-        'full_name',
+        'phone_number',
         'bio',
-        'profile_pic_url',
-        'is_private',
+        'birth_date',
+        'gender',
+        'image',
+
     ];
 
     protected $hidden = [
@@ -30,7 +33,6 @@ class User extends Authenticatable
 
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'is_private' => 'boolean',
     ];
 
     public function posts()
