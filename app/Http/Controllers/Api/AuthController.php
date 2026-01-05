@@ -37,7 +37,7 @@ class AuthController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'تم التسجيل بنجاح',
+                'message' => 'Registration successful',
                 'data' => [
                     'user' => $user->makeHidden(['password', 'remember_token']),
                     'token' => $token,
@@ -48,7 +48,7 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'حدث خطأ أثناء التسجيل',
+                'message' => 'An error occurred during recording',
                 'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
@@ -66,7 +66,7 @@ class AuthController extends Controller
             // التحقق من وجود المستخدم وصحة كلمة المرور
             if (!$user || !Hash::check($request->password, $user->password)) {
                 throw ValidationException::withMessages([
-                    'login' => ['بيانات الدخول غير صحيحة'],
+                    'login' => ['Incorrect login details'],
                 ]);
             }
 
@@ -75,7 +75,7 @@ class AuthController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'تم تسجيل الدخول بنجاح',
+                'message' => 'Login successful',
                 'data' => [
                     'user' => $user->makeHidden(['password', 'remember_token']),
                     'token' => $token,
@@ -87,14 +87,14 @@ class AuthController extends Controller
         } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'بيانات الدخول غير صحيحة',
+                'message' => 'Incorrect login details',
                 'errors' => $e->errors()
             ], 401);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'حدث خطأ أثناء تسجيل الدخول',
+                'message' => 'An error occurred while logging in',
                 'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
@@ -110,13 +110,13 @@ class AuthController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'تم تسجيل الخروج بنجاح'
+                'message' => 'Logged out successfully'
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'حدث خطأ أثناء تسجيل الخروج',
+                'message' => 'An error occurred while logging out',
                 'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
@@ -150,7 +150,7 @@ class AuthController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'تم جلب بيانات المستخدم',
+                'message' => 'User data has been retrieved',
                 'data' => [
                     'user' => $user->makeHidden(['password', 'remember_token']),
                     'stats' => $stats
@@ -160,7 +160,7 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'حدث خطأ أثناء جلب بيانات المستخدم',
+                'message' => 'An error occurred while retrieving user data.',
                 'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
@@ -187,7 +187,7 @@ class AuthController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'تم تحديث الملف الشخصي بنجاح',
+                'message' => 'Profile updated successfully',
                 'data' => [
                     'user' => $user->fresh()->makeHidden(['password', 'remember_token'])
                 ]
@@ -196,14 +196,14 @@ class AuthController extends Controller
         } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'بيانات غير صحيحة',
+                'message' => 'Incorrect data',
                 'errors' => $e->errors()
             ], 422);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'حدث خطأ أثناء تحديث الملف الشخصي',
+                'message' => 'An error occurred while updating the profile.',
                 'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
@@ -226,7 +226,7 @@ class AuthController extends Controller
             if (!Hash::check($request->current_password, $user->password)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'كلمة المرور الحالية غير صحيحة'
+                    'message' => 'The current password is incorrect.'
                 ], 422);
             }
 
@@ -243,7 +243,7 @@ class AuthController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'تم تحديث كلمة المرور بنجاح',
+                'message' => 'Password updated successfully',
                 'data' => [
                     'user' => $user->makeHidden(['password', 'remember_token']),
                     'token' => $newToken,
@@ -254,14 +254,14 @@ class AuthController extends Controller
         } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'بيانات غير صحيحة',
+                'message' => 'Incorrect data',
                 'errors' => $e->errors()
             ], 422);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'حدث خطأ أثناء تحديث كلمة المرور',
+                'message' => 'An error occurred while updating the password',
                 'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }

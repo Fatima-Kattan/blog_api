@@ -2,7 +2,8 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\PostController; // تأكد من المسار الصحيح
+use App\Http\Controllers\TagController;
+use App\Http\Controllers\PostController;
 
 Route::prefix('v1')->group(function () {
     
@@ -36,4 +37,14 @@ Route::prefix('v1')->group(function () {
         Route::post('/validate-images', [PostController::class, 'validateImageUrls']);
         Route::get('/posts/{post}/image-count', [PostController::class, 'getImageCount']);
     });
+});
+
+Route::prefix('tags')->group(function () {
+    Route::get('/', [TagController::class, 'index']);
+    Route::post('/', [TagController::class, 'store']);
+    Route::get('/search', [TagController::class, 'search']);
+    Route::get('/{id}', [TagController::class, 'show']);
+    Route::put('/{id}', [TagController::class, 'update']);
+    Route::delete('/{id}', [TagController::class, 'destroy']);
+    Route::get('/{id}/posts', [TagController::class, 'getPosts']);
 });
