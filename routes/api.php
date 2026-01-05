@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\PostController;
 
 Route::prefix('v1')->group(function () {
     
@@ -18,5 +19,21 @@ Route::prefix('v1')->group(function () {
         Route::put('/user/password', [AuthController::class, 'updatePassword']);
         Route::post('/user/image', [AuthController::class, 'updateProfilePicture']);
         Route::delete('/user/account', [AuthController::class, 'deleteAccount']);
+        
+        Route::get('/posts', [PostController::class, 'index']);
+        Route::post('/posts', [PostController::class, 'store']);
+        Route::get('/posts/{post}', [PostController::class, 'show']);
+        Route::put('/posts/{post}', [PostController::class, 'update']);
+        Route::delete('/posts/{post}', [PostController::class, 'destroy']);
+        
+        Route::post('/posts/{post}/images', [PostController::class, 'addImages']);
+        Route::delete('/posts/{post}/images', [PostController::class, 'removeImage']);
+        
+        Route::get('/posts/user/{userId}', [PostController::class, 'userPosts']);
+        Route::get('/my/posts', [PostController::class, 'myPosts']);
+        Route::get('/posts/search', [PostController::class, 'search']);
+        
+        Route::post('/validate-images', [PostController::class, 'validateImageUrls']);
+        Route::get('/posts/{post}/image-count', [PostController::class, 'getImageCount']);
     });
 });
