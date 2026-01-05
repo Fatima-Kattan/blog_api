@@ -2,7 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\PostController;
+use App\Http\Controllers\Api\PostController; // تأكد من المسار الصحيح
 
 Route::prefix('v1')->group(function () {
     
