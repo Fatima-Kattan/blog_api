@@ -4,14 +4,15 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\Api\PostController;
+use App\Http\Controllers\FollowController;
 
 Route::prefix('v1')->group(function () {
-    
+
     // 🔵 الروتات العامة (بدون مصادقة)
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
-    
+
     // 🔵 الروتات الخاصة (تتطلب مصادقة)
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
@@ -20,22 +21,28 @@ Route::prefix('v1')->group(function () {
         Route::put('/user/password', [AuthController::class, 'updatePassword']);
         Route::post('/user/image', [AuthController::class, 'updateProfilePicture']);
         Route::delete('/user/account', [AuthController::class, 'deleteAccount']);
-        
+
         Route::get('/posts', [PostController::class, 'index']);
         Route::post('/posts', [PostController::class, 'store']);
         Route::get('/posts/{post}', [PostController::class, 'show']);
         Route::put('/posts/{post}', [PostController::class, 'update']);
         Route::delete('/posts/{post}', [PostController::class, 'destroy']);
-        
+
         Route::post('/posts/{post}/images', [PostController::class, 'addImages']);
         Route::delete('/posts/{post}/images', [PostController::class, 'removeImage']);
-        
+
         Route::get('/posts/user/{userId}', [PostController::class, 'userPosts']);
         Route::get('/my/posts', [PostController::class, 'myPosts']);
         Route::get('/posts/search', [PostController::class, 'search']);
-        
+
         Route::post('/validate-images', [PostController::class, 'validateImageUrls']);
         Route::get('/posts/{post}/image-count', [PostController::class, 'getImageCount']);
+        
+        Route::post('follows', [FollowController::class, 'store']);
+        Route::delete('follows/{id}', [FollowController::class, 'destroy']);
+        Route::get('follows', [FollowController::class, 'index']);
+        Route::get('users/{id}/followers', [FollowController::class, 'followers']);
+        Route::get('users/{id}/followings', [FollowController::class, 'followings']);
     });
 });
 
