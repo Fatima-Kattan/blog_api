@@ -2,11 +2,9 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
-<<<<<<< HEAD
+
 use App\Http\Controllers\TagController;
-=======
 use App\Http\Controllers\PostController;
->>>>>>> 5556cdfc06575332d807069ceca3b42f46455a6d
 
 Route::prefix('v1')->group(function () {
     
