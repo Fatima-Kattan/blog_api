@@ -23,16 +23,5 @@ class Follow extends Model
     {
         return $this->belongsTo(User::class, 'following_id');
     }
-
-    // نطاق للمتابعات المقبولة
-    public function scopeAccepted($query)
-    {
-        return $query->where('status', 'accepted');
-    }
-
-    // نطاق للمتابعات المعلقة
-    public function scopePending($query)
-    {
-        return $query->where('status', 'pending');
-    }
+    
 }

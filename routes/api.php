@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\LikeController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\Api\PostController;
+use App\Http\Controllers\FollowController;
 
 Route::prefix('v1')->group(function () {
 
@@ -38,6 +39,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/validate-images', [PostController::class, 'validateImageUrls']);
         Route::get('/posts/{post}/image-count', [PostController::class, 'getImageCount']);
         
+
         Route::post('/likes/toggle', [LikeController::class, 'toggle']);
 
         // التحقق من الإعجاب
@@ -48,6 +50,13 @@ Route::prefix('v1')->group(function () {
 
         // حذف إعجاب محدد
         Route::delete('/likes/{id}', [LikeController::class, 'destroy']);
+
+        Route::post('follows', [FollowController::class, 'store']);
+        Route::delete('follows/{id}', [FollowController::class, 'destroy']);
+        Route::get('follows', [FollowController::class, 'index']);
+        Route::get('users/{id}/followers', [FollowController::class, 'followers']);
+        Route::get('users/{id}/followings', [FollowController::class, 'followings']);
+
     });
     Route::get('/likes', [LikeController::class, 'index']); // جميع الإعجابات (للإدارة)
     Route::get('/posts/{postId}/likes', [LikeController::class, 'getPostLikes']); // إعجابات منشور معين
@@ -64,4 +73,7 @@ Route::prefix('tags')->group(function () {
     Route::delete('/{id}', [TagController::class, 'destroy']);
     Route::get('/{id}/posts', [TagController::class, 'getPosts']);
 });
+
 Route::get('/posts/top-liked', [LikeController::class, 'getTopLikedPosts']);
+
+
