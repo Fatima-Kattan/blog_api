@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\TagController;
 
 Route::prefix('v1')->group(function () {
     
@@ -19,4 +20,14 @@ Route::prefix('v1')->group(function () {
         Route::post('/user/image', [AuthController::class, 'updateProfilePicture']);
         Route::delete('/user/account', [AuthController::class, 'deleteAccount']);
     });
+});
+
+Route::prefix('tags')->group(function () {
+    Route::get('/', [TagController::class, 'index']);
+    Route::post('/', [TagController::class, 'store']);
+    Route::get('/search', [TagController::class, 'search']);
+    Route::get('/{id}', [TagController::class, 'show']);
+    Route::put('/{id}', [TagController::class, 'update']);
+    Route::delete('/{id}', [TagController::class, 'destroy']);
+    Route::get('/{id}/posts', [TagController::class, 'getPosts']);
 });
