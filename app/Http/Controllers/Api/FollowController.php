@@ -8,11 +8,20 @@ use Illuminate\Support\Facades\Auth;
 
 class FollowController extends Controller
 {
-    // عرض كل المتابعات (اختياري)
     public function index()
-    {
-        return response()->json(Follow::all());
-    }
+{
+    $userId = Auth::id();
+
+    $followers = Follow::where('following_id', $userId)->with('follower')->get();
+    $followings = Follow::where('follower_id', $userId)->with('following')->get();
+
+    return response()->json([
+        'followers_count' => $followers->count(),
+        'followers' => $followers,
+        'followings_count' => $followings->count(),
+        'followings' => $followings,
+    ]);
+}
 
     // عمل متابعة جديدة
     public function store(Request $request)
