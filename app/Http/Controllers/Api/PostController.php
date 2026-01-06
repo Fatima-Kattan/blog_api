@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Follow;
+use App\Models\Notification;
 use App\Models\Post;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -21,9 +23,9 @@ class PostController extends Controller
             'likes.user:id,full_name',
             'comments.user:id,full_name'
         ])
-        ->withCount(['likes', 'comments'])
-        ->orderBy('created_at', 'desc')
-        ->paginate(10);
+            ->withCount(['likes', 'comments'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
 
         return response()->json([
             'success' => true,
@@ -82,19 +84,37 @@ class PostController extends Controller
 
             // تحميل علاقة المستخدم
             $post->load(['user:id,full_name,image']);
+            $this->createPostNotification($post);
+
 
             return response()->json([
                 'success' => true,
                 'data' => $post,
                 'message' => 'تم إنشاء المنشور بنجاح'
             ], 201);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'حدث خطأ أثناء إنشاء المنشور',
                 'error' => $e->getMessage()
             ], 500);
+        }
+    }
+
+    public function createPostNotification(Post $post)
+    {
+        // الحصول على كل المتابعين
+        $followers = Follow::where('following_id', $post->user_id)
+            ->pluck('follower_id');
+
+        foreach ($followers as $followerId) {
+            Notification::create([
+                'user_id' => $followerId,
+                'actor_id' => $post->user_id,
+                'type' => 'new_post',
+                'post_id' => $post->id,
+                'is_read' => false
+            ]);
         }
     }
 
@@ -109,8 +129,8 @@ class PostController extends Controller
             'comments.user:id,full_name,image',
             'comments.replies.user:id,full_name,image'
         ])
-        ->withCount(['likes', 'comments'])
-        ->find($id);
+            ->withCount(['likes', 'comments'])
+            ->find($id);
 
         if (!$post) {
             return response()->json([
@@ -156,7 +176,7 @@ class PostController extends Controller
             // إذا كانت هناك صور جديدة، استبدلها
             if (isset($validated['images'])) {
                 $images = array_filter($validated['images']); // تنظيف القيم الفارغة
-                
+
                 // التحقق من عدد الصور
                 if (count($images) > 4) {
                     return response()->json([
@@ -165,7 +185,7 @@ class PostController extends Controller
                         'images_count' => count($images)
                     ], 422);
                 }
-                
+
                 $post->update([
                     'title' => $validated['title'] ?? $post->title,
                     'caption' => $validated['caption'] ?? $post->caption,
@@ -186,7 +206,6 @@ class PostController extends Controller
                 'data' => $post,
                 'message' => 'تم تحديث المنشور بنجاح'
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -221,24 +240,24 @@ class PostController extends Controller
 
         // الحصول على الصور الحالية
         $currentImages = $post->images ?? [];
-        
+
         // الصور الجديدة
         $newImages = array_filter($validated['images']);
-        
+
         // التحقق من العدد الإجمالي
         $totalImages = array_merge($currentImages, $newImages);
-        
+
         if (count($totalImages) > 4) {
             $availableSlots = 4 - count($currentImages);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'لا يمكن إضافة أكثر من 4 صور للمنشور',
                 'current_images_count' => count($currentImages),
                 'new_images_count' => count($newImages),
                 'available_slots' => $availableSlots,
-                'suggestion' => $availableSlots > 0 ? 
-                    "يمكنك إضافة {$availableSlots} صور فقط" : 
+                'suggestion' => $availableSlots > 0 ?
+                    "يمكنك إضافة {$availableSlots} صور فقط" :
                     "يجب حذف بعض الصور أولاً"
             ], 422);
         }
@@ -258,7 +277,6 @@ class PostController extends Controller
                 ],
                 'message' => 'تم إضافة الصور بنجاح'
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -291,10 +309,10 @@ class PostController extends Controller
         ]);
 
         $currentImages = $post->images ?? [];
-        
+
         // البحث عن الصورة وإزالتها
         $imageIndex = array_search($validated['image_url'], $currentImages);
-        
+
         if ($imageIndex === false) {
             return response()->json([
                 'success' => false,
@@ -319,7 +337,6 @@ class PostController extends Controller
                 ],
                 'message' => 'تم حذف الصورة بنجاح'
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -350,7 +367,6 @@ class PostController extends Controller
                 'success' => true,
                 'message' => 'تم حذف المنشور بنجاح'
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -472,7 +488,7 @@ class PostController extends Controller
         }
 
         $images = $post->images ?? [];
-        
+
         return response()->json([
             'success' => true,
             'data' => [

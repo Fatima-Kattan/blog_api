@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Like;
+use App\Models\Notification;
 use App\Models\Post;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -41,88 +42,176 @@ class LikeController extends Controller
      * إذا كان المستخدم معجب بالفعل، يتم إزالة الإعجاب
      * وإلا يتم إضافة إعجاب جديد
      */
+    // public function toggle(Request $request)
+    // {
+    //     // التحقق من المستخدم المصادق
+    //     if (!Auth::check()) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'يجب تسجيل الدخول أولاً'
+    //         ], 401);
+    //     }
+
+    //     $validator = Validator::make($request->all(), [
+    //         'post_id' => 'required|exists:posts,id'
+    //     ], [
+    //         'post_id.required' => 'معرف المنشور مطلوب',
+    //         'post_id.exists' => 'المنشور غير موجود'
+    //     ]);
+
+    //     if ($validator->fails()) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'errors' => $validator->errors()
+    //         ], 422);
+    //     }
+
+    //     try {
+    //         $userId = Auth::id();
+    //         $postId = $request->post_id;
+
+    //         // البحث عن إعجاب موجود
+    //         $existingLike = Like::where('user_id', $userId)
+    //             ->where('post_id', $postId)
+    //             ->first();
+
+    //         if ($existingLike) {
+    //             // إذا كان الإعجاب موجوداً، قم بإزالته
+    //             $existingLike->delete();
+
+    //             // تحديث عدد الإعجابات في المنشور
+    //             $this->updatePostLikesCount($postId);
+
+    //             return response()->json([
+    //                 'success' => true,
+    //                 'action' => 'removed',
+    //                 'message' => 'تم إزالة الإعجاب بنجاح',
+    //                 'data' => [
+    //                     'post_id' => $postId,
+    //                     'likes_count' => Post::find($postId)->likes()->count()
+    //                 ]
+    //             ]);
+    //         } else {
+    //             // إذا لم يكن الإعجاب موجوداً، قم بإضافته
+    //             $like = Like::create([
+    //                 'user_id' => $userId,
+    //                 'post_id' => $postId
+    //             ]);
+
+    //             // تحميل العلاقات
+    //             $like->load(['user:id,full_name,image']);
+
+    //             // تحديث عدد الإعجابات في المنشور
+    //             $this->updatePostLikesCount($postId);
+
+    //             return response()->json([
+    //                 'success' => true,
+    //                 'action' => 'added',
+    //                 'message' => 'تم إضافة الإعجاب بنجاح',
+    //                 'data' => [
+    //                     'like' => $like,
+    //                     'post_id' => $postId,
+    //                     'likes_count' => Post::find($postId)->likes()->count()
+    //                 ]
+    //             ], 201);
+    //         }
+
+    //     } catch (\Exception $e) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'حدث خطأ أثناء معالجة الإعجاب',
+    //             'error' => $e->getMessage()
+    //         ], 500);
+    //     }
+    // }
+
     public function toggle(Request $request)
-    {
-        // التحقق من المستخدم المصادق
-        if (!Auth::check()) {
+{
+    if (!Auth::check()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'يجب تسجيل الدخول أولاً'
+        ], 401);
+    }
+
+    $validator = Validator::make($request->all(), [
+        'post_id' => 'required|exists:posts,id'
+    ], [
+        'post_id.required' => 'معرف المنشور مطلوب',
+        'post_id.exists'   => 'المنشور غير موجود'
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'success' => false,
+            'errors'  => $validator->errors()
+        ], 422);
+    }
+
+    try {
+        $userId = Auth::id();
+        $postId = $request->post_id;
+
+        $existingLike = Like::where('user_id', $userId)
+            ->where('post_id', $postId)
+            ->first();
+
+        if ($existingLike) {
+            // إزالة اللايك
+            $existingLike->delete();
+            $this->updatePostLikesCount($postId);
+
             return response()->json([
-                'success' => false,
-                'message' => 'يجب تسجيل الدخول أولاً'
-            ], 401);
-        }
+                'success' => true,
+                'action'  => 'removed',
+                'message' => 'تم إزالة الإعجاب بنجاح',
+                'data'    => [
+                    'post_id'     => $postId,
+                    'likes_count' => Post::find($postId)->likes()->count()
+                ]
+            ]);
+        } else {
+            // إضافة لايك جديد
+            $like = Like::create([
+                'user_id' => $userId,
+                'post_id' => $postId
+            ]);
 
-        $validator = Validator::make($request->all(), [
-            'post_id' => 'required|exists:posts,id'
-        ], [
-            'post_id.required' => 'معرف المنشور مطلوب',
-            'post_id.exists' => 'المنشور غير موجود'
-        ]);
+            $like->load(['user:id,full_name,image']);
+            $this->updatePostLikesCount($postId);
 
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        try {
-            $userId = Auth::id();
-            $postId = $request->post_id;
-
-            // البحث عن إعجاب موجود
-            $existingLike = Like::where('user_id', $userId)
-                ->where('post_id', $postId)
-                ->first();
-
-            if ($existingLike) {
-                // إذا كان الإعجاب موجوداً، قم بإزالته
-                $existingLike->delete();
-
-                // تحديث عدد الإعجابات في المنشور
-                $this->updatePostLikesCount($postId);
-
-                return response()->json([
-                    'success' => true,
-                    'action' => 'removed',
-                    'message' => 'تم إزالة الإعجاب بنجاح',
-                    'data' => [
-                        'post_id' => $postId,
-                        'likes_count' => Post::find($postId)->likes()->count()
-                    ]
+            // 🔔 توليد إشعار لصاحب البوست
+            $postOwnerId = Post::find($postId)->user_id;
+            if ($postOwnerId !== $userId) {
+                Notification::create([
+                    'user_id'  => $postOwnerId,   // المستلم (صاحب البوست)
+                    'actor_id' => $userId,        // الفاعل (يلي عمل لايك)
+                    'type'     => 'like',
+                    'post_id'  => $postId,
+                    'is_read'  => false,
                 ]);
-            } else {
-                // إذا لم يكن الإعجاب موجوداً، قم بإضافته
-                $like = Like::create([
-                    'user_id' => $userId,
-                    'post_id' => $postId
-                ]);
-
-                // تحميل العلاقات
-                $like->load(['user:id,full_name,image']);
-
-                // تحديث عدد الإعجابات في المنشور
-                $this->updatePostLikesCount($postId);
-
-                return response()->json([
-                    'success' => true,
-                    'action' => 'added',
-                    'message' => 'تم إضافة الإعجاب بنجاح',
-                    'data' => [
-                        'like' => $like,
-                        'post_id' => $postId,
-                        'likes_count' => Post::find($postId)->likes()->count()
-                    ]
-                ], 201);
             }
 
-        } catch (\Exception $e) {
             return response()->json([
-                'success' => false,
-                'message' => 'حدث خطأ أثناء معالجة الإعجاب',
-                'error' => $e->getMessage()
-            ], 500);
+                'success' => true,
+                'action'  => 'added',
+                'message' => 'تم إضافة الإعجاب بنجاح',
+                'data'    => [
+                    'like'        => $like,
+                    'post_id'     => $postId,
+                    'likes_count' => Post::find($postId)->likes()->count()
+                ]
+            ], 201);
         }
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'حدث خطأ أثناء معالجة الإعجاب',
+            'error'   => $e->getMessage()
+        ], 500);
     }
+}
 
     /**
      * التحقق إذا كان المستخدم معجب بالمنشور
