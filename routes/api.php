@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\Api\PostController;
+use App\Http\Controllers\PostTagController;
 
 Route::prefix('v1')->group(function () {
     
@@ -23,6 +24,7 @@ Route::prefix('v1')->group(function () {
         
         Route::get('/posts', [PostController::class, 'index']);
         Route::post('/posts', [PostController::class, 'store']);
+        Route::get('/posts/search', [PostController::class, 'search']);
         Route::get('/posts/{post}', [PostController::class, 'show']);
         Route::put('/posts/{post}', [PostController::class, 'update']);
         Route::delete('/posts/{post}', [PostController::class, 'destroy']);
@@ -32,10 +34,20 @@ Route::prefix('v1')->group(function () {
         
         Route::get('/posts/user/{userId}', [PostController::class, 'userPosts']);
         Route::get('/my/posts', [PostController::class, 'myPosts']);
-        Route::get('/posts/search', [PostController::class, 'search']);
         
         Route::post('/validate-images', [PostController::class, 'validateImageUrls']);
         Route::get('/posts/{post}/image-count', [PostController::class, 'getImageCount']);
+        
+        Route::prefix('post-tags')->group(function () {
+            Route::post('/{postId}', [PostTagController::class, 'store']);
+            Route::delete('/{postId}/{tagId}', [PostTagController::class, 'destroy']);
+            Route::put('/{postId}/sync', [PostTagController::class, 'sync']);
+        });
+    });
+    
+    Route::prefix('post-tags')->group(function () {
+        Route::get('/{postId}', [PostTagController::class, 'index']);
+        Route::get('/tag/{tagId}/posts', [PostTagController::class, 'postsByTag']);
     });
 });
 
