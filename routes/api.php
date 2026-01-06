@@ -5,7 +5,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\LikeController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\Api\PostController;
-use App\Http\Controllers\FollowController;
+use App\Http\Controllers\Api\FollowController;
 use App\Http\Controllers\PostTagController;
 
 Route::prefix('v1')->group(function () {
