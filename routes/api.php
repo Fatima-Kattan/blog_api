@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\PostController;
 use App\Http\Controllers\Api\FollowController;
 use App\Http\Controllers\PostTagController;
 use App\Http\Controllers\Api\CommentController;
+use App\Http\Controllers\Api\NotificationController;
 
 Route::prefix('v1')->group(function () {
     
@@ -67,6 +68,16 @@ Route::prefix('v1')->group(function () {
         Route::get('follows', [FollowController::class, 'index']);
         Route::get('users/{id}/followers', [FollowController::class, 'followers']);
         Route::get('users/{id}/followings', [FollowController::class, 'followings']);
+
+        //الاشعارات
+        Route::get('/notifications', [NotificationController::class, 'index']); 
+        Route::get('/notifications/{id}', [NotificationController::class, 'show']);
+        Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead']); 
+        Route::patch('/notifications/{id}/unread', [NotificationController::class, 'markAsUnread']);
+        Route::patch('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+        Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']); 
+        Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']); 
+    
 
         Route::prefix('post-tags')->group(function () {
             Route::post('/{postId}', [PostTagController::class, 'store']);

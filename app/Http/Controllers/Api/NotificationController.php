@@ -62,16 +62,50 @@ class NotificationController extends Controller
             ->where('id', $id)
             ->firstOrFail();
 
-            $notification->update(['is_read' => true]);
+        $notification->update(['is_read' => true]);
 
-            return response()->json([
-                'message' => 'Notification marked as read',
-                'data' => $notification
-            ], 200);
-        
+        return response()->json([
+            'message' => 'Notification marked as read',
+            'data' => $notification
+        ], 200);
+    }
+    // تعليم الاشعار كغير مقروء
+
+    public function markAsUnread($id)
+    {
+        $notification = Notification::where('user_id', Auth::id())
+            ->where('id', $id)
+            ->firstOrFail();
+
+        $notification->update(['is_read' => false]);
+
+        return response()->json([
+            'message' => 'Notification marked as unread',
+            'data'    => $notification
+        ], 200);
     }
 
+    //جعل جميع الاشعارات مقروءة دفعة واحدة 
+    public function markAllAsRead()
+    {
+        Notification::where('user_id', Auth::id())
+            ->update(['is_read' => true]);
 
+        return response()->json([
+            'message' => 'All notifications marked as read'
+        ], 200);
+    }
+    //عدد الاشعارات الغير مقروءة    
+    public function unreadCount()
+    {
+        $count = Notification::where('user_id', Auth::id())
+            ->where('is_read', false)
+            ->count();
+
+        return response()->json([
+            'unread_count' => $count
+        ], 200);
+    }
     /**
      * Show the form for editing the specified resource.
      */
