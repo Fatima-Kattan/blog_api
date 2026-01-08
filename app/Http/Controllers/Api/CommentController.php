@@ -57,76 +57,74 @@ class CommentController extends Controller
      * إنشاء تعليق جديد
      */
     public function store(Request $request)
-    {
-        try {
-            // التحقق من البيانات
-            $validator = Validator::make($request->all(), [
-                'post_id' => 'required|exists:posts,id',
-                'comment_text' => 'required|string|min:1|max:1000'
-            ], [
-                'post_id.required' => 'معرف المنشور مطلوب',
-                'post_id.exists' => 'المنشور غير موجود',
-                'comment_text.required' => 'نص التعليق مطلوب',
-                'comment_text.min' => 'نص التعليق يجب أن يكون على الأقل حرفاً واحداً',
-                'comment_text.max' => 'نص التعليق يجب أن لا يتجاوز 1000 حرف'
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'success' => false,
-                    'errors' => $validator->errors(),
-                    'message' => 'فشل التحقق من البيانات'
-                ], 422);
-            }
-
-            // التحقق من وجود المنشور
-            $post = Post::find($request->post_id);
-            if (!$post) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'المنشور غير موجود'
-                ], 404);
-            }
-
-            // إنشاء التعليق
-            $comment = Comment::create([
-                'user_id' => Auth::id(),
-                'post_id' => $request->post_id,
-                'comment_text' => $request->comment_text
-            ]);
-
-            // تحميل بيانات المستخدم مع التعليق
-            $comment->load(['user:id,full_name,image']);
-
-            // ✅ إشعار للمالك (إذا لم يكن هو المعلق نفسه)
-            if ($post->user_id != Auth::id()) {
-                Notification::create([
-                    'user_id' => $post->user_id, // مالك المنشور
-                    'sender_id' => Auth::id(),   // المعلق
-                    'type' => 'comment',
-                    'related_id' => $comment->id,
-                    'message' => 'علق ' . Auth::user()->full_name . ' على منشورك'
-                ]);
-            }
-
-            // ❌ تمت إزالة هذا السطر لأن عمود comments_count غير موجود
-            // $post->increment('comments_count');
-
-            return response()->json([
-                'success' => true,
-                'data' => $comment,
-                'message' => 'تم إضافة التعليق بنجاح',
-                'current_comments_count' => $post->comments()->count() // حساب العدد ديناميكياً
-            ], 201);
-        } catch (\Exception $e) {
+{
+    try {
+        // التحقق من المستخدم المصادق
+        if (!Auth::check()) {
             return response()->json([
                 'success' => false,
-                'message' => 'حدث خطأ أثناء إضافة التعليق',
-                'error' => $e->getMessage()
-            ], 500);
+                'message' => 'يجب تسجيل الدخول أولاً'
+            ], 401);
         }
-    }
 
+        // التحقق من البيانات
+        $validated = $request->validate([
+            'post_id' => 'required|exists:posts,id',
+            'comment_text' => 'required|string|max:1000',
+        ], [
+            'post_id.required' => 'معرف المنشور مطلوب',
+            'post_id.exists' => 'المنشور غير موجود',
+            'comment_text.required' => 'نص التعليق مطلوب',
+            'comment_text.max' => 'نص التعليق يجب أن لا يتجاوز 1000 حرف'
+        ]);
+
+        // التحقق من وجود المنشور
+        $post = Post::find($validated['post_id']);
+        if (!$post) {
+            return response()->json([
+                'success' => false,
+                'message' => 'المنشور غير موجود'
+            ], 404);
+        }
+
+        // إنشاء التعليق
+        $comment = Comment::create([
+            'user_id' => Auth::id(),
+            'post_id' => $validated['post_id'],
+            'comment_text' => $validated['comment_text']
+        ]);
+
+        // تحميل علاقة المستخدم
+        $comment->load(['user:id,full_name,image']);
+
+        // إنشاء إشعار (اختياري)
+        // $this->createCommentNotification($comment, $post);
+
+        return response()->json([
+            'success' => true,
+            'data' => $comment,
+            'message' => 'تم إضافة التعليق بنجاح',
+            'comments_count' => Comment::where('post_id', $validated['post_id'])->count()
+        ], 201);
+        
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        // هذا خاص بال validation errors
+        return response()->json([
+            'success' => false,
+            'errors' => $e->errors(),
+            'message' => 'فشل التحقق من البيانات'
+        ], 422);
+        
+    } catch (\Exception $e) {
+        // هذا لجميع الأخطاء الأخرى
+        return response()->json([
+            'success' => false,
+            'message' => 'حدث خطأ أثناء إضافة التعليق',
+            'error' => $e->getMessage(),
+            'trace' => env('APP_DEBUG') ? $e->getTraceAsString() : null
+        ], 500);
+    }
+}
     /**
      * عرض تعليق معين
      */
