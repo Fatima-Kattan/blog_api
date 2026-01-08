@@ -22,25 +22,7 @@ class NotificationController extends Controller
             'data' => $notifications
         ], 200);
     }
-
-
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
+    
     /**
      * Display the specified resource.
      */
@@ -48,7 +30,7 @@ class NotificationController extends Controller
     {
         $notification = Notification::where('user_id', Auth::id())
             ->where('id', $id)
-            ->firstOrFail();
+            ->first();
 
         return response()->json([
             'data' => $notification
@@ -60,7 +42,7 @@ class NotificationController extends Controller
     {
         $notification = Notification::where('user_id', Auth::id())
             ->where('id', $id)
-            ->firstOrFail();
+            ->first();
 
         $notification->update(['is_read' => true]);
 
@@ -75,7 +57,7 @@ class NotificationController extends Controller
     {
         $notification = Notification::where('user_id', Auth::id())
             ->where('id', $id)
-            ->firstOrFail();
+            ->first();
 
         $notification->update(['is_read' => false]);
 
@@ -95,32 +77,29 @@ class NotificationController extends Controller
             'message' => 'All notifications marked as read'
         ], 200);
     }
+
+
     //عدد الاشعارات الغير مقروءة    
     public function unreadCount()
     {
-        $count = Notification::where('user_id', Auth::id())
+        $userId = Auth::id();
+        
+        if (!$userId) {
+            return response()->json([
+                'message' => 'User not authenticated'
+            ], 401);
+        }
+    
+        $unreadCount = Notification::where('user_id', $userId)
             ->where('is_read', false)
-            ->count();
-
+            ->count(); // استخدم count() مباشرة بدلاً من get()->count()
+    
         return response()->json([
-            'unread_count' => $count
+            'unread_count' => $unreadCount
         ], 200);
     }
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Notification $notification)
-    {
-        //
-    }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Notification $notification)
-    {
-        //
-    }
+    
 
     /**
      * Remove the specified resource from storage.
@@ -130,7 +109,7 @@ class NotificationController extends Controller
     {
         $notification = Notification::where('user_id', Auth::id())
             ->where('id', $id)
-            ->firstOrFail();
+            ->first();
 
         $notification->delete();
 
