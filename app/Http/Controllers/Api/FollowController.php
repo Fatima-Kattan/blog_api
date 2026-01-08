@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Follow;
+use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -44,7 +45,15 @@ class FollowController extends Controller
             'following_id' => $request->following_id,
             'status' => 'accepted', // ثابتة على accepted
         ]);
-
+        Notification::create([
+            'user_id'    => $request->following_id, // المستلم (المتابَع)
+            'actor_id'   => Auth::id(),             // الفاعل (المتابِع)
+            'type'       => 'follow',
+            'post_id'    => null,
+            'comment_id' => null,
+            'is_read'    => false,
+        ]);
+    
         return response()->json($follow, 201);
     }
 
