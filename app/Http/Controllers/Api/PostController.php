@@ -111,7 +111,7 @@ class PostController extends Controller
             Notification::create([
                 'user_id' => $followerId,
                 'actor_id' => $post->user_id,
-                'type' => 'new_post',
+                'type' => 'mention',
                 'post_id' => $post->id,
                 'is_read' => false
             ]);
