@@ -7,6 +7,8 @@ use App\Http\Controllers\TagController;
 use App\Http\Controllers\Api\PostController;
 use App\Http\Controllers\Api\FollowController;
 use App\Http\Controllers\PostTagController;
+use App\Http\Controllers\Api\CommentController;
+use App\Http\Controllers\Api\NotificationController;
 
 Route::prefix('v1')->group(function () {
     
@@ -14,6 +16,16 @@ Route::prefix('v1')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+
+    Route::prefix('comments')->group(function () {
+        Route::get('/', [CommentController::class, 'index']);
+        Route::get('/search', [CommentController::class, 'search']);
+        Route::get('/latest', [CommentController::class, 'latestComments']);
+        Route::get('/{id}', [CommentController::class, 'show']);
+        Route::get('/post/{postId}', [CommentController::class, 'postComments']);
+        Route::get('/user/{userId}', [CommentController::class, 'userComments']);
+        Route::get('/count/{postId}', [CommentController::class, 'commentsCount']);
+    });
     
     // 🔵 الروتات الخاصة (تتطلب مصادقة)
     Route::middleware('auth:sanctum')->group(function () {
@@ -57,10 +69,26 @@ Route::prefix('v1')->group(function () {
         Route::get('users/{id}/followers', [FollowController::class, 'followers']);
         Route::get('users/{id}/followings', [FollowController::class, 'followings']);
 
+        //الاشعارات
+        Route::get('/notifications', [NotificationController::class, 'index']); 
+        Route::get('/notifications/{id}', [NotificationController::class, 'show']);
+        Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead']); 
+        Route::patch('/notifications/{id}/unread', [NotificationController::class, 'markAsUnread']);
+        Route::patch('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+        Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']); 
+        Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']); 
+    
+
         Route::prefix('post-tags')->group(function () {
             Route::post('/{postId}', [PostTagController::class, 'store']);
             Route::delete('/{postId}/{tagId}', [PostTagController::class, 'destroy']);
             Route::put('/{postId}/sync', [PostTagController::class, 'sync']);
+    });
+        Route::prefix('comments')->group(function () {
+            Route::post('/', [CommentController::class, 'store']);
+            Route::put('/{id}', [CommentController::class, 'update']);
+            Route::delete('/{id}', [CommentController::class, 'destroy']);
+            Route::get('/my/comments', [CommentController::class, 'myComments']); // خاص بالمستخدم الحالي
         });
     });
     Route::get('/likes', [LikeController::class, 'index']); // جميع الإعجابات (للإدارة)
