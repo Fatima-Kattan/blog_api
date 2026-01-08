@@ -81,25 +81,16 @@ class NotificationController extends Controller
 
     //عدد الاشعارات الغير مقروءة    
     public function unreadCount()
-    {
-        $userId = Auth::id();
-        
-        if (!$userId) {
-            return response()->json([
-                'message' => 'User not authenticated'
-            ], 401);
-        }
-    
-        $unreadCount = Notification::where('user_id', $userId)
+    {    
+        $unreadCount = Notification::where('user_id',Auth::id())
             ->where('is_read', false)
-            ->count(); // استخدم count() مباشرة بدلاً من get()->count()
-    
-        return response()->json([
+            ->count(); 
+
+            return response()->json([
             'unread_count' => $unreadCount
         ], 200);
+        
     }
-
-    
 
     /**
      * Remove the specified resource from storage.

@@ -53,29 +53,29 @@ Route::prefix('v1')->group(function () {
         Route::get('/posts/{post}/image-count', [PostController::class, 'getImageCount']);
         
         Route::post('/likes/toggle', [LikeController::class, 'toggle']);
-
         // التحقق من الإعجاب
+        
         Route::post('/likes/check', [LikeController::class, 'check']);
-
+        
         // إعجاباتي (المستخدم الحالي)
         Route::get('/likes/my-likes', [LikeController::class, 'myLikes']);
-
+        
         // حذف إعجاب محدد
         Route::delete('/likes/{id}', [LikeController::class, 'destroy']);
-
+        
         Route::post('follows', [FollowController::class, 'store']);
         Route::delete('follows/{id}', [FollowController::class, 'destroy']);
         Route::get('follows', [FollowController::class, 'index']);
         Route::get('users/{id}/followers', [FollowController::class, 'followers']);
         Route::get('users/{id}/followings', [FollowController::class, 'followings']);
-
+        
         //الاشعارات
         Route::get('/notifications', [NotificationController::class, 'index']); 
+        Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
         Route::get('/notifications/{id}', [NotificationController::class, 'show']);
         Route::put('/notifications/{id}/read', [NotificationController::class, 'markAsRead']); 
         Route::put('/notifications/{id}/unread', [NotificationController::class, 'markAsUnread']);
         Route::put('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
-        Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
         Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']); 
     
 
