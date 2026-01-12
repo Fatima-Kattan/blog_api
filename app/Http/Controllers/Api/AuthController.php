@@ -352,4 +352,58 @@ class AuthController extends Controller
             ], 500);
         }
     }
+
+    /**
+ * عرض الملف الشخصي لمستخدم محدد عن طريق الـ ID
+ */
+public function showProfile($id): JsonResponse
+{
+    try {
+        // البحث عن المستخدم بالـ ID
+        $user = User::with([
+            'followers' => function ($query) {
+                $query->wherePivot('status', 'accepted');
+            },
+            'following' => function ($query) {
+                $query->wherePivot('status', 'accepted');
+            },
+            'posts' => function ($query) {
+                $query->latest()->limit(10);
+            }
+        ])->find($id);
+
+        // التحقق من وجود المستخدم
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found'
+            ], 404);
+        }
+
+        // جمع الإحصائيات
+        $stats = [
+            'posts_count' => $user->posts()->count(),
+            'followers_count' => $user->followers()->count(),
+            'following_count' => $user->following()->count(),
+            'likes_count' => $user->likes()->count(),
+            'comments_count' => $user->comments()->count(),
+        ];
+
+        return response()->json([
+            'success' => true,
+            'message' => 'User profile retrieved successfully',
+            'data' => [
+                'user' => $user->makeHidden(['password', 'remember_token']),
+                'stats' => $stats
+            ]
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'An error occurred while retrieving the user profile',
+            'error' => config('app.debug') ? $e->getMessage() : null
+        ], 500);
+    }
+}
 }

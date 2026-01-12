@@ -11,7 +11,7 @@ use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\NotificationController;
 
 Route::prefix('v1')->group(function () {
-    
+
     // 🔵 الروتات العامة (بدون مصادقة)
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
@@ -26,7 +26,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/user/{userId}', [CommentController::class, 'userComments']);
         Route::get('/count/{postId}', [CommentController::class, 'commentsCount']);
     });
-    
+
     // 🔵 الروتات الخاصة (تتطلب مصادقة)
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
@@ -35,55 +35,56 @@ Route::prefix('v1')->group(function () {
         Route::put('/user/password', [AuthController::class, 'updatePassword']);
         Route::post('/user/image', [AuthController::class, 'updateProfilePicture']);
         Route::delete('/user/account', [AuthController::class, 'deleteAccount']);
-        
+        Route::get('/users/profile/{id}', [AuthController::class, 'showProfile']);
+
         Route::get('/posts', [PostController::class, 'index']);
         Route::post('/posts', [PostController::class, 'store']);
         Route::get('/posts/search', [PostController::class, 'search']);
         Route::get('/posts/{post}', [PostController::class, 'show']);
         Route::put('/posts/{post}', [PostController::class, 'update']);
         Route::delete('/posts/{post}', [PostController::class, 'destroy']);
-        
+
         Route::post('/posts/{post}/images', [PostController::class, 'addImages']);
         Route::delete('/posts/{post}/images', [PostController::class, 'removeImage']);
-        
+
         Route::get('/posts/user/{userId}', [PostController::class, 'userPosts']);
         Route::get('/my/posts', [PostController::class, 'myPosts']);
-        
+
         Route::post('/validate-images', [PostController::class, 'validateImageUrls']);
         Route::get('/posts/{post}/image-count', [PostController::class, 'getImageCount']);
-        
+
         Route::post('/likes/toggle', [LikeController::class, 'toggle']);
         // التحقق من الإعجاب
-        
+
         Route::post('/likes/check', [LikeController::class, 'check']);
-        
+
         // إعجاباتي (المستخدم الحالي)
         Route::get('/likes/my-likes', [LikeController::class, 'myLikes']);
-        
+
         // حذف إعجاب محدد
         Route::delete('/likes/{id}', [LikeController::class, 'destroy']);
-        
+
         Route::post('follows', [FollowController::class, 'store']);
         Route::delete('follows/{id}', [FollowController::class, 'destroy']);
         Route::get('follows', [FollowController::class, 'index']);
         Route::get('users/{id}/followers', [FollowController::class, 'followers']);
         Route::get('users/{id}/followings', [FollowController::class, 'followings']);
-        
+
         //الاشعارات
-        Route::get('/notifications', [NotificationController::class, 'index']); 
+        Route::get('/notifications', [NotificationController::class, 'index']);
         Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
         Route::get('/notifications/{id}', [NotificationController::class, 'show']);
-        Route::put('/notifications/{id}/read', [NotificationController::class, 'markAsRead']); 
+        Route::put('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
         Route::put('/notifications/{id}/unread', [NotificationController::class, 'markAsUnread']);
         Route::put('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
-        Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']); 
-    
+        Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
+
 
         Route::prefix('post-tags')->group(function () {
             Route::post('/{postId}', [PostTagController::class, 'store']);
             Route::delete('/{postId}/{tagId}', [PostTagController::class, 'destroy']);
             Route::put('/{postId}/sync', [PostTagController::class, 'sync']);
-    });
+        });
         Route::prefix('comments')->group(function () {
             Route::post('/', [CommentController::class, 'store']);
             Route::put('/{id}', [CommentController::class, 'update']);
@@ -99,8 +100,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/{postId}', [PostTagController::class, 'index']);
         Route::get('/tag/{tagId}/posts', [PostTagController::class, 'postsByTag']);
     });
-    });
-    
+});
+
 
 Route::prefix('tags')->group(function () {
     Route::get('/', [TagController::class, 'index']);
