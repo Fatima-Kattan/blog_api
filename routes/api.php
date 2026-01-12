@@ -68,6 +68,9 @@ Route::prefix('v1')->group(function () {
         Route::get('follows', [FollowController::class, 'index']);
         Route::get('users/{id}/followers', [FollowController::class, 'followers']);
         Route::get('users/{id}/followings', [FollowController::class, 'followings']);
+        Route::get('/users/{id}/not-followings', [FollowController::class, 'notFollowings']);
+
+
         
         //الاشعارات
         Route::get('/notifications', [NotificationController::class, 'index']); 
