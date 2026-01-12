@@ -176,6 +176,7 @@ class AuthController extends Controller
             
             $validated = $request->validate([
                 'full_name' => 'sometimes|string|max:255',
+                'email'=>'email|string',
                 'phone_number' => 'sometimes|string|max:20|unique:users,phone_number,' . $user->id,
                 'bio' => 'sometimes|nullable|string|max:500',
                 'birth_date' => 'sometimes|date|before:-13 years',
