@@ -16,6 +16,7 @@ Route::prefix('v1')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+    Route::get('/posts', [PostController::class, 'index']);
 
     Route::prefix('comments')->group(function () {
         Route::get('/', [CommentController::class, 'index']);
@@ -37,7 +38,6 @@ Route::prefix('v1')->group(function () {
         Route::delete('/user/account', [AuthController::class, 'deleteAccount']);
         Route::get('/users/profile/{id}', [AuthController::class, 'showProfile']);
 
-        Route::get('/posts', [PostController::class, 'index']);
         Route::post('/posts', [PostController::class, 'store']);
         Route::get('/posts/search', [PostController::class, 'search']);
         Route::get('/posts/{post}', [PostController::class, 'show']);

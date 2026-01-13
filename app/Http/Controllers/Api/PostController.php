@@ -13,9 +13,7 @@ use Illuminate\Support\Facades\DB;
 
 class PostController extends Controller
 {
-    /**
-     * عرض جميع المنشورات مع العلاقات
-     */
+    
     public function index()
     {
         $posts = Post::with([
@@ -30,13 +28,11 @@ class PostController extends Controller
         return response()->json([
             'success' => true,
             'data' => $posts,
-            'message' => 'تم جلب المنشورات بنجاح'
+            'message' => 'Posts fetched successfully'
         ]);
     }
 
-    /**
-     * إنشاء منشور جديد
-     */
+    
     public function store(Request $request)
     {
         // التحقق من المستخدم المصادق
@@ -103,7 +99,7 @@ class PostController extends Controller
 
     public function createPostNotification(Post $post)
     {
-        // الحصول على كل المتابعين
+        
         $followers = Follow::where('following_id', $post->user_id)
             ->pluck('follower_id');
 
@@ -118,9 +114,7 @@ class PostController extends Controller
         }
     }
 
-    /**
-     * عرض منشور معين
-     */
+    
     public function show($id)
     {
         $post = Post::with([
@@ -146,12 +140,10 @@ class PostController extends Controller
         ]);
     }
 
-    /**
-     * تحديث منشور
-     */
+    
     public function update(Request $request, $id)
     {
-        // البحث عن المنشور المملوك للمستخدم الحالي
+        
         $post = Post::where('user_id', Auth::id())->find($id);
 
         if (!$post) {
@@ -161,7 +153,7 @@ class PostController extends Controller
             ], 404);
         }
 
-        // التحقق من البيانات
+        
         $validated = $request->validate([
             'title' => 'sometimes|required|string|max:255',
             'caption' => 'sometimes|required|string',
@@ -173,11 +165,11 @@ class PostController extends Controller
         ]);
 
         try {
-            // إذا كانت هناك صور جديدة، استبدلها
+            
             if (isset($validated['images'])) {
-                $images = array_filter($validated['images']); // تنظيف القيم الفارغة
+                $images = array_filter($validated['images']); 
 
-                // التحقق من عدد الصور
+                
                 if (count($images) > 4) {
                     return response()->json([
                         'success' => false,
@@ -198,7 +190,7 @@ class PostController extends Controller
                 ]);
             }
 
-            // تحميل علاقة المستخدم
+            
             $post->load(['user:id,full_name,image']);
 
             return response()->json([
@@ -215,9 +207,7 @@ class PostController extends Controller
         }
     }
 
-    /**
-     * إضافة صور إلى منشور موجود
-     */
+    
     public function addImages(Request $request, $id)
     {
         $post = Post::where('user_id', Auth::id())->find($id);
@@ -229,7 +219,7 @@ class PostController extends Controller
             ], 404);
         }
 
-        // التحقق من البيانات
+        
         $validated = $request->validate([
             'images' => 'required|array|max:4',
             'images.*' => 'required|url|max:500'
@@ -238,13 +228,13 @@ class PostController extends Controller
             'images.*.url' => 'يجب أن تكون الرابط صحيحاً'
         ]);
 
-        // الحصول على الصور الحالية
+        
         $currentImages = $post->images ?? [];
 
-        // الصور الجديدة
+        
         $newImages = array_filter($validated['images']);
 
-        // التحقق من العدد الإجمالي
+        
         $totalImages = array_merge($currentImages, $newImages);
 
         if (count($totalImages) > 4) {
@@ -263,7 +253,7 @@ class PostController extends Controller
         }
 
         try {
-            // دمج الصور
+            
             $post->update([
                 'images' => $totalImages
             ]);
@@ -286,9 +276,7 @@ class PostController extends Controller
         }
     }
 
-    /**
-     * حذف صورة من منشور
-     */
+    
     public function removeImage(Request $request, $id)
     {
         $post = Post::where('user_id', Auth::id())->find($id);
@@ -300,7 +288,7 @@ class PostController extends Controller
             ], 404);
         }
 
-        // التحقق من البيانات
+        
         $validated = $request->validate([
             'image_url' => 'required|url'
         ], [
@@ -310,7 +298,7 @@ class PostController extends Controller
 
         $currentImages = $post->images ?? [];
 
-        // البحث عن الصورة وإزالتها
+        
         $imageIndex = array_search($validated['image_url'], $currentImages);
 
         if ($imageIndex === false) {
