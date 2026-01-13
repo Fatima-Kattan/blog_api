@@ -19,10 +19,11 @@ class NotificationController extends Controller
             ->get();
 
         return response()->json([
-            'data' => $notifications
+            'count' => $notifications->count(), // العدد الكلي
+            'data'  => $notifications
         ], 200);
     }
-    
+
     /**
      * Display the specified resource.
      */
@@ -81,15 +82,14 @@ class NotificationController extends Controller
 
     //عدد الاشعارات الغير مقروءة    
     public function unreadCount()
-    {    
-        $unreadCount = Notification::where('user_id',Auth::id())
+    {
+        $unreadCount = Notification::where('user_id', Auth::id())
             ->where('is_read', false)
-            ->count(); 
+            ->count();
 
-            return response()->json([
+        return response()->json([
             'unread_count' => $unreadCount
         ], 200);
-        
     }
 
     /**
