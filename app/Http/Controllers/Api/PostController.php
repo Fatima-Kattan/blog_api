@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Follow;
 use App\Models\Notification;
 use App\Models\Post;
+use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -19,7 +20,8 @@ class PostController extends Controller
         $posts = Post::with([
             'user:id,full_name,image',
             'likes.user:id,full_name',
-            'comments.user:id,full_name'
+            'comments.user:id,full_name',
+            'tags' // ✅ إضافة تحميل التاغات
         ])
             ->withCount(['likes', 'comments'])
             ->orderBy('created_at', 'desc')
@@ -78,10 +80,28 @@ class PostController extends Controller
                 'images' => $images
             ]);
 
-            // تحميل علاقة المستخدم
-            $post->load(['user:id,full_name,image']);
-            $this->createPostNotification($post);
+            // ✅ **استخراج التاغات من النص تلقائياً**
+            $caption = $validated['caption'];
+            preg_match_all('/#(\w+)/', $caption, $matches);
+            
+            if (!empty($matches[1])) {
+                foreach ($matches[1] as $tagName) {
+                    // تنظيف واختصار التاغ
+                    $cleanTagName = strtolower(substr(trim($tagName), 0, 50));
+                    
+                    // البحث عن التاغ أو إنشاؤه
+                    $tag = Tag::firstOrCreate(
+                        ['tag_name' => $cleanTagName]
+                    );
+                    
+                    // ربط التاغ بالمنشور
+                    $post->tags()->attach($tag->id);
+                }
+            }
 
+            // تحميل علاقة المستخدم والتاغات
+            $post->load(['user:id,full_name,image', 'tags']);
+            $this->createPostNotification($post);
 
             return response()->json([
                 'success' => true,
@@ -121,7 +141,8 @@ class PostController extends Controller
             'user:id,full_name,image,bio',
             'likes.user:id,full_name,image',
             'comments.user:id,full_name,image',
-            'comments.replies.user:id,full_name,image'
+            'comments.replies.user:id,full_name,image',
+            'tags' // ✅ إضافة تحميل التاغات
         ])
             ->withCount(['likes', 'comments'])
             ->find($id);
@@ -190,8 +211,28 @@ class PostController extends Controller
                 ]);
             }
 
+            // ✅ **تحديث التاغات تلقائياً**
+            // حذف التاغات القديمة
+            $post->tags()->detach();
             
-            $post->load(['user:id,full_name,image']);
+            // استخراج التاغات الجديدة من النص
+            $newCaption = $validated['caption'] ?? $post->caption;
+            preg_match_all('/#(\w+)/', $newCaption, $matches);
+            
+            if (!empty($matches[1])) {
+                foreach ($matches[1] as $tagName) {
+                    $cleanTagName = strtolower(substr(trim($tagName), 0, 50));
+                    
+                    $tag = Tag::firstOrCreate(
+                        ['tag_name' => $cleanTagName]
+                    );
+                    
+                    $post->tags()->attach($tag->id);
+                }
+            }
+
+            
+            $post->load(['user:id,full_name,image', 'tags']);
 
             return response()->json([
                 'success' => true,
@@ -258,6 +299,9 @@ class PostController extends Controller
                 'images' => $totalImages
             ]);
 
+            // ✅ تحميل التاغات مع البوست
+            $post->load('tags');
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -317,6 +361,9 @@ class PostController extends Controller
                 'images' => $currentImages
             ]);
 
+            // ✅ تحميل التاغات مع البوست
+            $post->load('tags');
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -349,6 +396,9 @@ class PostController extends Controller
         }
 
         try {
+            // ✅ حذف جميع علاقات التاغات أولاً
+            $post->tags()->detach();
+            
             $post->delete();
 
             return response()->json([
@@ -378,7 +428,8 @@ class PostController extends Controller
             ], 404);
         }
 
-        $posts = Post::withCount(['likes', 'comments'])
+        $posts = Post::with(['tags']) // ✅ إضافة تحميل التاغات
+            ->withCount(['likes', 'comments'])
             ->where('user_id', $userId)
             ->orderBy('created_at', 'desc')
             ->paginate(10);
@@ -398,7 +449,8 @@ class PostController extends Controller
      */
     public function myPosts()
     {
-        $posts = Post::withCount(['likes', 'comments'])
+        $posts = Post::with(['tags']) // ✅ إضافة تحميل التاغات
+            ->withCount(['likes', 'comments'])
             ->where('user_id', Auth::id())
             ->orderBy('created_at', 'desc')
             ->paginate(10);
@@ -425,7 +477,7 @@ class PostController extends Controller
 
         $keyword = $validated['keyword'];
 
-        $posts = Post::with(['user:id,full_name,image'])
+        $posts = Post::with(['user:id,full_name,image', 'tags']) // ✅ إضافة تحميل التاغات
             ->withCount(['likes', 'comments'])
             ->where('title', 'LIKE', "%{$keyword}%")
             ->orWhere('caption', 'LIKE', "%{$keyword}%")
@@ -466,7 +518,8 @@ class PostController extends Controller
      */
     public function getImageCount($id)
     {
-        $post = Post::find($id);
+        $post = Post::with(['tags']) // ✅ إضافة تحميل التاغات
+            ->find($id);
 
         if (!$post) {
             return response()->json([
@@ -483,7 +536,8 @@ class PostController extends Controller
                 'post_id' => $post->id,
                 'total_images' => count($images),
                 'available_slots' => 4 - count($images),
-                'images' => $images
+                'images' => $images,
+                'tags' => $post->tags // ✅ إرجاع التاغات
             ],
             'message' => 'تم جلب عدد الصور بنجاح'
         ]);

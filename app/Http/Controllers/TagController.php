@@ -14,7 +14,9 @@ class TagController extends Controller
     public function index()
     {
         try {
-            $tags = Tag::orderBy('created_at', 'desc')->get();
+            $tags = Tag::withCount('posts') // ✅ إضافة عدد المنشورات
+                ->orderBy('created_at', 'desc')
+                ->get();
             return response()->json([
                 'success' => true,
                 'data' => $tags
@@ -34,7 +36,8 @@ class TagController extends Controller
     public function show($id)
     {
         try {
-            $tag = Tag::find($id);
+            $tag = Tag::withCount('posts') // ✅ إضافة عدد المنشورات
+                ->find($id);
             
             if (!$tag) {
                 return response()->json([
@@ -158,11 +161,11 @@ class TagController extends Controller
         }
 
         try {
-            // تحقق إذا كان الوسم مرتبطاً بأي مقالات
+            // تحقق إذا كان الوسم مرتبطاً بأي منشورات
             if ($tag->posts()->count() > 0) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'لا يمكن حذف الوسم لأنه مرتبط بمقالات'
+                    'message' => 'لا يمكن حذف الوسم لأنه مرتبط بمنشورات' // ✅ تعديل الرسالة
                 ], 400);
             }
 
@@ -182,12 +185,13 @@ class TagController extends Controller
     }
 
     /**
-     * جلب المقالات المرتبطة بوسم معين
+     * جلب المنشورات المرتبطة بوسم معين
      */
     public function getPosts($id)
     {
         try {
-            $tag = Tag::with('posts')->find($id);
+            $tag = Tag::with(['posts.user', 'posts.tags']) // ✅ تحميل المنشورات مع المستخدم والتاغات
+                ->find($id);
             
             if (!$tag) {
                 return response()->json([
@@ -198,12 +202,12 @@ class TagController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data' => $tag->posts
+                'data' => $tag->posts()->paginate(10) // ✅ إضافة pagination
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'حدث خطأ أثناء جلب المقالات',
+                'message' => 'حدث خطأ أثناء جلب المنشورات',
                 'error' => $e->getMessage()
             ], 500);
         }
@@ -230,6 +234,7 @@ class TagController extends Controller
 
         try {
             $tags = Tag::where('tag_name', 'like', '%' . $request->keyword . '%')
+                ->withCount('posts') // ✅ إضافة عدد المنشورات
                 ->orderBy('created_at', 'desc')
                 ->get();
 
