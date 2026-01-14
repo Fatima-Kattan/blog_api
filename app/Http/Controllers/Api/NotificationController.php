@@ -14,15 +14,21 @@ class NotificationController extends Controller
      */
     public function index()
     {
-        $notifications = Notification::where('user_id', Auth::id()) //auth()->id()
+        $notifications = Notification::where('user_id', Auth::id())
             ->latest()
             ->get();
 
+        // عدد الغير مقروءة بناءً على is_read
+        $unreadCount = Notification::where('user_id', Auth::id())
+            ->where('is_read', false) // أو 0 إذا مخزن كـ integer
+            ->count();
+
         return response()->json([
-            'data' => $notifications
+            'count' => $unreadCount, // عدد الغير مقروءة فقط
+            'data'  => $notifications // كل الإشعارات
         ], 200);
     }
-    
+
     /**
      * Display the specified resource.
      */
@@ -81,15 +87,14 @@ class NotificationController extends Controller
 
     //عدد الاشعارات الغير مقروءة    
     public function unreadCount()
-    {    
-        $unreadCount = Notification::where('user_id',Auth::id())
+    {
+        $unreadCount = Notification::where('user_id', Auth::id())
             ->where('is_read', false)
-            ->count(); 
+            ->count();
 
-            return response()->json([
+        return response()->json([
             'unread_count' => $unreadCount
         ], 200);
-        
     }
 
     /**
