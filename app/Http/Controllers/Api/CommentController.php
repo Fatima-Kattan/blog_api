@@ -57,74 +57,72 @@ class CommentController extends Controller
      * إنشاء تعليق جديد
      */
     public function store(Request $request)
-{
-    try {
-        // التحقق من المستخدم المصادق
-        if (!Auth::check()) {
+    {
+        try {
+            // التحقق من المستخدم المصادق
+            if (!Auth::check()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'يجب تسجيل الدخول أولاً'
+                ], 401);
+            }
+
+            // التحقق من البيانات
+            $validated = $request->validate([
+                'post_id' => 'required|exists:posts,id',
+                'comment_text' => 'required|string|max:1000',
+            ], [
+                'post_id.required' => 'معرف المنشور مطلوب',
+                'post_id.exists' => 'المنشور غير موجود',
+                'comment_text.required' => 'نص التعليق مطلوب',
+                'comment_text.max' => 'نص التعليق يجب أن لا يتجاوز 1000 حرف'
+            ]);
+
+            // التحقق من وجود المنشور
+            $post = Post::find($validated['post_id']);
+            if (!$post) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'المنشور غير موجود'
+                ], 404);
+            }
+
+            // إنشاء التعليق
+            $comment = Comment::create([
+                'user_id' => Auth::id(),
+                'post_id' => $validated['post_id'],
+                'comment_text' => $validated['comment_text']
+            ]);
+
+            // تحميل علاقة المستخدم
+            $comment->load(['user:id,full_name,image']);
+
+            // إنشاء إشعار (اختياري)
+            // $this->createCommentNotification($comment, $post);
+
+            return response()->json([
+                'success' => true,
+                'data' => $comment,
+                'message' => 'تم إضافة التعليق بنجاح',
+                'comments_count' => Comment::where('post_id', $validated['post_id'])->count()
+            ], 201);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // هذا خاص بال validation errors
             return response()->json([
                 'success' => false,
-                'message' => 'يجب تسجيل الدخول أولاً'
-            ], 401);
-        }
-
-        // التحقق من البيانات
-        $validated = $request->validate([
-            'post_id' => 'required|exists:posts,id',
-            'comment_text' => 'required|string|max:1000',
-        ], [
-            'post_id.required' => 'معرف المنشور مطلوب',
-            'post_id.exists' => 'المنشور غير موجود',
-            'comment_text.required' => 'نص التعليق مطلوب',
-            'comment_text.max' => 'نص التعليق يجب أن لا يتجاوز 1000 حرف'
-        ]);
-
-        // التحقق من وجود المنشور
-        $post = Post::find($validated['post_id']);
-        if (!$post) {
+                'errors' => $e->errors(),
+                'message' => 'فشل التحقق من البيانات'
+            ], 422);
+        } catch (\Exception $e) {
+            // هذا لجميع الأخطاء الأخرى
             return response()->json([
                 'success' => false,
-                'message' => 'المنشور غير موجود'
-            ], 404);
+                'message' => 'حدث خطأ أثناء إضافة التعليق',
+                'error' => $e->getMessage(),
+                'trace' => env('APP_DEBUG') ? $e->getTraceAsString() : null
+            ], 500);
         }
-
-        // إنشاء التعليق
-        $comment = Comment::create([
-            'user_id' => Auth::id(),
-            'post_id' => $validated['post_id'],
-            'comment_text' => $validated['comment_text']
-        ]);
-
-        // تحميل علاقة المستخدم
-        $comment->load(['user:id,full_name,image']);
-
-        // إنشاء إشعار (اختياري)
-        // $this->createCommentNotification($comment, $post);
-
-        return response()->json([
-            'success' => true,
-            'data' => $comment,
-            'message' => 'تم إضافة التعليق بنجاح',
-            'comments_count' => Comment::where('post_id', $validated['post_id'])->count()
-        ], 201);
-        
-    } catch (\Illuminate\Validation\ValidationException $e) {
-        // هذا خاص بال validation errors
-        return response()->json([
-            'success' => false,
-            'errors' => $e->errors(),
-            'message' => 'فشل التحقق من البيانات'
-        ], 422);
-        
-    } catch (\Exception $e) {
-        // هذا لجميع الأخطاء الأخرى
-        return response()->json([
-            'success' => false,
-            'message' => 'حدث خطأ أثناء إضافة التعليق',
-            'error' => $e->getMessage(),
-            'trace' => env('APP_DEBUG') ? $e->getTraceAsString() : null
-        ], 500);
     }
-}
     /**
      * عرض تعليق معين
      */
@@ -269,15 +267,15 @@ class CommentController extends Controller
                 ->orderBy('created_at', $request->sort ?? 'desc')
                 ->paginate($request->per_page ?? 15);
 
+            // ✅ عدل هنا - أعد بنية الـ pagination مباشرة
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'post' => [
-                        'id' => $post->id,
-                        'title' => $post->title,
-                        'comments_count' => $comments->total() // استخدام total() من الباجينيت
-                    ],
-                    'comments' => $comments
+                    'data' => $comments->items(),  // ← البيانات هنا
+                    'current_page' => $comments->currentPage(),
+                    'last_page' => $comments->lastPage(),
+                    'per_page' => $comments->perPage(),
+                    'total' => $comments->total()
                 ],
                 'message' => 'تعليقات المنشور'
             ]);
