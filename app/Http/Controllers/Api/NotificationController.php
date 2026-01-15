@@ -15,17 +15,17 @@ class NotificationController extends Controller
     public function index()
     {
         $notifications = Notification::where('user_id', Auth::id())
+            ->with('actor:id,full_name,image') // جلب اسم وصورة الـ actor
             ->latest()
             ->get();
-
-        // عدد الغير مقروءة بناءً على is_read
+    
         $unreadCount = Notification::where('user_id', Auth::id())
-            ->where('is_read', false) // أو 0 إذا مخزن كـ integer
+            ->where('is_read', false)
             ->count();
-
+    
         return response()->json([
-            'count' => $unreadCount, // عدد الغير مقروءة فقط
-            'data'  => $notifications // كل الإشعارات
+            'count' => $unreadCount,
+            'data'  => $notifications
         ], 200);
     }
 
