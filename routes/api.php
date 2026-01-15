@@ -20,13 +20,10 @@ Route::prefix('v1')->group(function () {
     Route::get('/posts', [PostController::class, 'index']);
 
     // 🔍 روتات البحث (بدون مصادقة) ← أضف هنا
-    Route::prefix('search')->group(function () {
-        Route::get('/global', [SearchController::class, 'globalSearch']);
-        Route::get('/quick', [SearchController::class, 'quickSearch']);
-        Route::get('/advanced', [SearchController::class, 'advancedSearch']);
-        Route::get('/tag/{tagId}/posts', [SearchController::class, 'searchPostsByTag']);
-        Route::get('/suggestions', [SearchController::class, 'searchSuggestions']);
-    });
+    
+    Route::get('/search', [SearchController::class, 'search']);
+    Route::get('/search/quick', [SearchController::class, 'quickSearch']);
+    
 
     Route::prefix('comments')->group(function () {
         Route::get('/', [CommentController::class, 'index']);
