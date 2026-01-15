@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\FollowController;
 use App\Http\Controllers\PostTagController;
 use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\SearchController; // ← أضف هذا الاستيراد
 
 Route::prefix('v1')->group(function () {
 
@@ -17,6 +18,15 @@ Route::prefix('v1')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
     Route::get('/posts', [PostController::class, 'index']);
+
+    // 🔍 روتات البحث (بدون مصادقة) ← أضف هنا
+    Route::prefix('search')->group(function () {
+        Route::get('/global', [SearchController::class, 'globalSearch']);
+        Route::get('/quick', [SearchController::class, 'quickSearch']);
+        Route::get('/advanced', [SearchController::class, 'advancedSearch']);
+        Route::get('/tag/{tagId}/posts', [SearchController::class, 'searchPostsByTag']);
+        Route::get('/suggestions', [SearchController::class, 'searchSuggestions']);
+    });
 
     Route::prefix('comments')->group(function () {
         Route::get('/', [CommentController::class, 'index']);
@@ -54,14 +64,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/posts/{post}/image-count', [PostController::class, 'getImageCount']);
 
         Route::post('/likes/toggle', [LikeController::class, 'toggle']);
-        // التحقق من الإعجاب
-
         Route::post('/likes/check', [LikeController::class, 'check']);
-
-        // إعجاباتي (المستخدم الحالي)
         Route::get('/likes/my-likes', [LikeController::class, 'myLikes']);
-
-        // حذف إعجاب محدد
         Route::delete('/likes/{id}', [LikeController::class, 'destroy']);
 
         Route::post('follows', [FollowController::class, 'store']);
@@ -70,6 +74,7 @@ Route::prefix('v1')->group(function () {
         Route::get('users/{id}/followers', [FollowController::class, 'followers']);
         Route::get('users/{id}/followings', [FollowController::class, 'followings']);
         Route::get('/users/{id}/not-followings', [FollowController::class, 'notFollowings']);
+        
         //الاشعارات
         Route::get('/notifications', [NotificationController::class, 'index']);
         Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
@@ -79,23 +84,25 @@ Route::prefix('v1')->group(function () {
         Route::put('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
         Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
 
-
         Route::prefix('post-tags')->group(function () {
             Route::post('/{postId}', [PostTagController::class, 'store']);
             Route::delete('/{postId}/{tagId}', [PostTagController::class, 'destroy']);
             Route::put('/{postId}/sync', [PostTagController::class, 'sync']);
         });
+        
         Route::prefix('comments')->group(function () {
             Route::post('/', [CommentController::class, 'store']);
             Route::put('/{id}', [CommentController::class, 'update']);
             Route::delete('/{id}', [CommentController::class, 'destroy']);
-            Route::get('/my/comments', [CommentController::class, 'myComments']); // خاص بالمستخدم الحالي
+            Route::get('/my/comments', [CommentController::class, 'myComments']);
         });
     });
-    Route::get('/likes', [LikeController::class, 'index']); // جميع الإعجابات (للإدارة)
-    Route::get('/posts/{postId}/likes', [LikeController::class, 'getPostLikes']); // إعجابات منشور معين
-    Route::get('/users/{userId}/likes', [LikeController::class, 'getUserLikes']); // إعجابات مستخدم معين
-    Route::get('/posts/{postId}/likes-count', [LikeController::class, 'getLikesCount']); // عدد إعجابات منشور
+    
+    Route::get('/likes', [LikeController::class, 'index']);
+    Route::get('/posts/{postId}/likes', [LikeController::class, 'getPostLikes']);
+    Route::get('/users/{userId}/likes', [LikeController::class, 'getUserLikes']);
+    Route::get('/posts/{postId}/likes-count', [LikeController::class, 'getLikesCount']);
+    
     Route::prefix('post-tags')->group(function () {
         Route::get('/{postId}', [PostTagController::class, 'index']);
         Route::get('/tag/{tagId}/posts', [PostTagController::class, 'postsByTag']);
@@ -112,4 +119,5 @@ Route::prefix('tags')->group(function () {
     Route::delete('/{id}', [TagController::class, 'destroy']);
     Route::get('/{id}/posts', [TagController::class, 'getPosts']);
 });
+
 Route::get('/posts/top-liked', [LikeController::class, 'getTopLikedPosts']);
