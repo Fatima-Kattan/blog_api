@@ -380,6 +380,35 @@ class LikeController extends Controller
         }
     }
 
+     public function checkUserLike(Post $post)
+    {
+        try {
+            $user = Auth::user();
+            $hasLiked = false;
+
+            if ($user) {
+                $hasLiked = $post->likes()
+                    ->where('user_id', $user->id)
+                    ->exists();
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'has_liked' => $hasLiked
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'حدث خطأ أثناء التحقق من حالة الإعجاب',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+
     /**
      * جلب الإعجابات حسب المستخدم
      */

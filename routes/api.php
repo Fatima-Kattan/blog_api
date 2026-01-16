@@ -60,7 +60,7 @@ Route::prefix('v1')->group(function () {
 
         // إعجاباتي (المستخدم الحالي)
         Route::get('/likes/my-likes', [LikeController::class, 'myLikes']);
-
+        Route::get('/posts/{post}/check-like', [LikeController::class, 'checkUserLike']);
         // حذف إعجاب محدد
         Route::delete('/likes/{id}', [LikeController::class, 'destroy']);
 
