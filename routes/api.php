@@ -50,7 +50,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/posts/{post}', [PostController::class, 'show']);
         Route::put('/posts/{post}', [PostController::class, 'update']);
         Route::delete('/posts/{post}', [PostController::class, 'destroy']);
-
+        Route::get('/user/{userId}/posts', [PostController::class, 'getUserPosts']);
         Route::post('/posts/{post}/images', [PostController::class, 'addImages']);
         Route::delete('/posts/{post}/images', [PostController::class, 'removeImage']);
 
