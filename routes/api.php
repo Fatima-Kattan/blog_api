@@ -50,7 +50,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/posts', [PostController::class, 'store']);
         Route::put('/posts/{post}', [PostController::class, 'update']);
         Route::delete('/posts/{post}', [PostController::class, 'destroy']);
-
+        Route::get('/user/{userId}/posts', [PostController::class, 'getUserPosts']);
         Route::post('/posts/{post}/images', [PostController::class, 'addImages']);
         Route::delete('/posts/{post}/images', [PostController::class, 'removeImage']);
 
@@ -63,6 +63,8 @@ Route::prefix('v1')->group(function () {
         Route::post('/likes/toggle', [LikeController::class, 'toggle']);
         Route::post('/likes/check', [LikeController::class, 'check']);
         Route::get('/likes/my-likes', [LikeController::class, 'myLikes']);
+        Route::get('/posts/{post}/check-like', [LikeController::class, 'checkUserLike']);
+        // حذف إعجاب محدد
         Route::delete('/likes/{id}', [LikeController::class, 'destroy']);
 
         Route::post('follows', [FollowController::class, 'store']);

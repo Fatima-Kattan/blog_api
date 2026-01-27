@@ -598,4 +598,72 @@ public function search(Request $request)
             'message' => 'تم جلب عدد الصور بنجاح'
         ]);
     }
+
+    /**
+     * الحصول على جميع منشورات مستخدم معين
+     */
+    public function getUserPosts($userId)
+    {
+        // التحقق من وجود المستخدم
+        $user = User::find($userId);
+        
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'المستخدم غير موجود'
+            ], 404);
+        }
+
+        try {
+            // جلب منشورات المستخدم مع جميع العلاقات
+            $posts = Post::with([
+                'user:id,full_name,image',
+                'likes.user:id,full_name',
+                'comments.user:id,full_name',
+                'tags'
+            ])
+            ->withCount(['likes', 'comments'])
+            ->where('user_id', $userId)
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
+
+            // إحصائيات إضافية - باستخدام الجداول الصحيحة
+            $postStats = [
+                'total_posts' => Post::where('user_id', $userId)->count(),
+                'total_likes' => DB::table('likes')
+                    ->join('posts', 'likes.post_id', '=', 'posts.id')
+                    ->where('posts.user_id', $userId)
+                    ->count(),
+                'total_comments' => DB::table('comments')
+                    ->join('posts', 'comments.post_id', '=', 'posts.id')
+                    ->where('posts.user_id', $userId)
+                    ->count(),
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'user' => [
+                        'id' => $user->id,
+                        'full_name' => $user->full_name,
+                        'image' => $user->image,
+                        'bio' => $user->bio,
+                        'created_at' => $user->created_at->format('Y-m-d H:i:s'),
+                    ],
+                    'posts' => $posts,
+                    'stats' => $postStats,
+                ],
+                'message' => 'تم جلب منشورات المستخدم بنجاح'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'حدث خطأ أثناء جلب منشورات المستخدم',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+    
+
 }
