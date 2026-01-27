@@ -135,17 +135,18 @@ class PostController extends Controller
     }
 
     
-    public function show($id)
-    {
+public function show($id)
+{
+    try {
+        // جيب البوست الأساسي
         $post = Post::with([
             'user:id,full_name,image,bio',
             'likes.user:id,full_name,image',
             'comments.user:id,full_name,image',
-            'comments.replies.user:id,full_name,image',
-            'tags' // ✅ إضافة تحميل التاغات
+            'tags'
         ])
-            ->withCount(['likes', 'comments'])
-            ->find($id);
+        ->withCount(['likes', 'comments'])
+        ->find($id);
 
         if (!$post) {
             return response()->json([
@@ -154,13 +155,48 @@ class PostController extends Controller
             ], 404);
         }
 
+        // ⭐ ⭐ ⭐ ⭐ ⭐ ⭐ ⭐ ⭐ ⭐ ⭐ ⭐ ⭐ ⭐ ⭐
+        // ⭐  تحقق إذا الـcomments عندها replies ⭐
+        // ⭐ ⭐ ⭐ ⭐ ⭐ ⭐ ⭐ ⭐ ⭐ ⭐ ⭐ ⭐ ⭐ ⭐
+        
+        $commentsWithReplies = [];
+        foreach ($post->comments as $comment) {
+            $commentData = $comment->toArray();
+            
+            // ⭐ تحقق إذا relation replies موجودة
+            try {
+                if (method_exists($comment, 'replies')) {
+                    $comment->load('replies.user:id,full_name,image');
+                    $commentData['replies'] = $comment->replies;
+                } else {
+                    $commentData['replies'] = [];
+                }
+            } catch (\Exception $e) {
+                // إذا فيه خطأ، خليه array فارغة
+                $commentData['replies'] = [];
+            }
+            
+            $commentsWithReplies[] = $commentData;
+        }
+
+        // استبدل comments بالنسخة المعدلة
+        $postData = $post->toArray();
+        $postData['comments'] = $commentsWithReplies;
+
         return response()->json([
             'success' => true,
-            'data' => $post,
+            'data' => $postData,
             'message' => 'تم جلب المنشور بنجاح'
         ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'حدث خطأ في جلب المنشور',
+            'error' => $e->getMessage()
+        ], 500);
     }
-
+}
     
     public function update(Request $request, $id)
     {
@@ -465,31 +501,51 @@ class PostController extends Controller
     /**
      * البحث في المنشورات
      */
-    public function search(Request $request)
-    {
-        // التحقق من البيانات
-        $validated = $request->validate([
-            'keyword' => 'required|string|min:2'
-        ], [
-            'keyword.required' => 'كلمة البحث مطلوبة',
-            'keyword.min' => 'الكلمة المفتاحية يجب أن تكون على الأقل حرفين'
-        ]);
+    // في PostController.php - دالة search
+public function search(Request $request)
+{
+    // التحقق من البيانات
+    $validated = $request->validate([
+        'keyword' => 'required|string|min:2'
+    ], [
+        'keyword.required' => 'كلمة البحث مطلوبة',
+        'keyword.min' => 'الكلمة المفتاحية يجب أن تكون على الأقل حرفين'
+    ]);
 
-        $keyword = $validated['keyword'];
-
-        $posts = Post::with(['user:id,full_name,image', 'tags']) // ✅ إضافة تحميل التاغات
+    $keyword = $validated['keyword'];
+    
+    // ⭐ **تحقق إذا كان البحث عن تاغ**
+    $isTagSearch = str_starts_with($keyword, '#');
+    
+    if ($isTagSearch) {
+        $tagName = substr($keyword, 1);
+        
+        // ⭐ **ابحث في البوستات اللي فيها هذه التاغات**
+        $posts = Post::with(['user:id,full_name,image', 'tags'])
+            ->withCount(['likes', 'comments'])
+            ->whereHas('tags', function ($query) use ($tagName) {
+                $query->where('tag_name', 'LIKE', "%{$tagName}%");
+            })
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
+    } else {
+        // البحث العادي في العنوان والوصف
+        $posts = Post::with(['user:id,full_name,image', 'tags'])
             ->withCount(['likes', 'comments'])
             ->where('title', 'LIKE', "%{$keyword}%")
             ->orWhere('caption', 'LIKE', "%{$keyword}%")
             ->orderBy('created_at', 'desc')
             ->paginate(10);
-
-        return response()->json([
-            'success' => true,
-            'data' => $posts,
-            'message' => 'نتائج البحث'
-        ]);
     }
+
+    return response()->json([
+        'success' => true,
+        'is_tag_search' => $isTagSearch,
+        'search_keyword' => $keyword,
+        'data' => $posts,
+        'message' => 'نتائج البحث'
+    ]);
+}
 
     /**
      * التحقق من روابط الصور (اختياري)

@@ -104,19 +104,24 @@ class PostTagController extends Controller
     /**
      * البحث عن منشورات بتاغ معين
      */
-    public function postsByTag($tagId)
-    {
-        $tag = Tag::with(['posts.user', 'posts.tags'])
-                  ->findOrFail($tagId);
-        
-        $posts = $tag->posts()->paginate(10);
-        
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'tag' => $tag,
-                'posts' => $posts
-            ]
-        ]);
-    }
+    // في PostTagController.php
+public function postsByTag($tagId)
+{
+    $tag = Tag::with(['posts.user', 'posts.tags'])
+              ->findOrFail($tagId);
+    
+    // ⭐ **أضف withCount هنا!**
+    $posts = $tag->posts()
+        ->with(['user:id,full_name,image', 'tags'])
+        ->withCount(['likes', 'comments']) // ⭐ ⭐ ⭐ ⭐ ⭐
+        ->paginate(10);
+    
+    return response()->json([
+        'success' => true,
+        'data' => [
+            'tag' => $tag,
+            'posts' => $posts
+        ]
+    ]);
+}
 }

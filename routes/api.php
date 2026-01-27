@@ -35,6 +35,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/count/{postId}', [CommentController::class, 'commentsCount']);
     });
 
+    Route::get('/posts/search', [PostController::class, 'search']);
+    Route::get('/posts/{post}', [PostController::class, 'show']);
     // 🔵 الروتات الخاصة (تتطلب مصادقة)
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
@@ -46,8 +48,6 @@ Route::prefix('v1')->group(function () {
         Route::get('/users/profile/{id}', [AuthController::class, 'showProfile']);
 
         Route::post('/posts', [PostController::class, 'store']);
-        Route::get('/posts/search', [PostController::class, 'search']);
-        Route::get('/posts/{post}', [PostController::class, 'show']);
         Route::put('/posts/{post}', [PostController::class, 'update']);
         Route::delete('/posts/{post}', [PostController::class, 'destroy']);
 
