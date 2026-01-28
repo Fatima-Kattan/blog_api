@@ -6,14 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Models\Post;
 use App\Models\User;
 use App\Models\Tag;
+use App\Models\Like;
+use App\Models\Comment;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class SearchController extends Controller
 {
     /**
-     * Search everything in one endpoint
+     * Search everything in one endpoint - نسخة مع اللايكات والتعليقات
      */
     public function search(Request $request): JsonResponse
     {
@@ -28,43 +31,26 @@ class SearchController extends Controller
             $type = $request->input('type', 'all');
             $limit = $request->input('limit', 15);
 
-            // 👇 **تهيئة المصفوفات أولاً لتجنب أخطاء undefined**
+            // 👇 **تهيئة النتائج**
             $results = [
                 'users' => collect(),
                 'posts' => collect(),
                 'tags' => collect()
             ];
             
-            Log::info('Search request:', [
-                'query' => $query,
-                'type' => $type,
-                'limit' => $limit
-            ]);
-
-            // ⭐ **تحقق إذا كان البحث عن تاغ (يبدأ بـ #)**
             $isTagSearch = str_starts_with($query, '#');
             
             if ($isTagSearch) {
-                $tagName = substr($query, 1); // أزل الـ #
-                Log::info('Tag search detected', ['tagName' => $tagName]);
+                $tagName = substr($query, 1);
                 
-                // ⭐ **البحث في التاغات**
+                // 🔍 **البحث في التاغات**
                 if ($type === 'all' || $type === 'tags') {
                     $results['tags'] = Tag::where('tag_name', 'LIKE', "%{$tagName}%")
                         ->limit($limit)
-                        ->get()
-                        ->map(function ($tag) {
-                            return [
-                                'id' => $tag->id,
-                                'type' => 'tag',
-                                'name' => $tag->tag_name,
-                            ];
-                        });
-                    
-                    Log::info('Tags found:', ['count' => $results['tags']->count()]);
+                        ->get();
                 }
                 
-                // ⭐ **البحث في البوستات التي تحتوي على التاغ**
+                // 🔍 **البحث في البوستات للتاغ**
                 if ($type === 'all' || $type === 'posts') {
                     $results['posts'] = Post::with(['user:id,full_name,image', 'tags:id,tag_name'])
                         ->whereHas('tags', function ($q) use ($tagName) {
@@ -73,53 +59,24 @@ class SearchController extends Controller
                         ->limit($limit)
                         ->get()
                         ->map(function ($post) {
-                            return [
-                                'id' => $post->id,
-                                'type' => 'post',
-                                'title' => $post->title,
-                                'caption' => $post->caption,
-                                'user' => $post->user,
-                                'tags' => $post->tags,
-                                'created_at' => $post->created_at,
-                            ];
+                            return $this->formatPostWithCounts($post);
                         });
-                    
-                    Log::info('Posts with tag found:', ['count' => $results['posts']->count()]);
-                }
-                
-                // ⭐ **المستخدمين: ما في علاقة مباشرة مع التاغات**
-                if ($type === 'all' || $type === 'users') {
-                    $results['users'] = collect();
-                    Log::info('Users search skipped for tag search');
                 }
                 
             } else {
-                // البحث العادي بدون #
-                Log::info('Normal search (not a tag)');
+                // البحث العادي
                 
-                // 🔍 Search Users
+                // 🔍 **المستخدمين**
                 if ($type === 'all' || $type === 'users') {
                     $results['users'] = User::where('full_name', 'LIKE', "%{$query}%")
                         ->orWhere('email', 'LIKE', "%{$query}%")
                         ->orWhere('bio', 'LIKE', "%{$query}%")
                         ->select(['id', 'full_name', 'email', 'bio', 'image', 'created_at'])
                         ->limit($limit)
-                        ->get()
-                        ->map(function ($user) {
-                            return [
-                                'id' => $user->id,
-                                'type' => 'user',
-                                'name' => $user->full_name,
-                                'email' => $user->email,
-                                'image' => $user->image,
-                                'bio' => $user->bio,
-                            ];
-                        });
-                    
-                    Log::info('Users found:', ['count' => $results['users']->count()]);
+                        ->get();
                 }
 
-                // 🔍 Search Posts
+                // 🔍 **البوستات - مع اللايكات والتعليقات**
                 if ($type === 'all' || $type === 'posts') {
                     $results['posts'] = Post::with(['user:id,full_name,image', 'tags:id,tag_name'])
                         ->where(function ($queryBuilder) use ($query) {
@@ -129,152 +86,247 @@ class SearchController extends Controller
                         ->limit($limit)
                         ->get()
                         ->map(function ($post) {
-                            return [
-                                'id' => $post->id,
-                                'type' => 'post',
-                                'title' => $post->title,
-                                'caption' => $post->caption,
-                                'user' => $post->user,
-                                'tags' => $post->tags,
-                                'created_at' => $post->created_at,
-                            ];
+                            return $this->formatPostWithCounts($post);
                         });
-                    
-                    Log::info('Posts found:', ['count' => $results['posts']->count()]);
                 }
 
-                // 🔍 Search Tags
+                // 🔍 **التاغات**
                 if ($type === 'all' || $type === 'tags') {
                     $results['tags'] = Tag::where('tag_name', 'LIKE', "%{$query}%")
                         ->limit($limit)
-                        ->get()
-                        ->map(function ($tag) {
-                            return [
-                                'id' => $tag->id,
-                                'type' => 'tag',
-                                'name' => $tag->tag_name,
-                            ];
-                        });
-                    
-                    Log::info('Tags found:', ['count' => $results['tags']->count()]);
+                        ->get();
                 }
             }
 
-            $response = [
+            // ⭐ **تنسيق النتائج**
+            $formattedResults = [
+                'users' => $results['users']->map(function ($user) {
+                    return [
+                        'id' => $user->id,
+                        'type' => 'user',
+                        'full_name' => $user->full_name,
+                        'email' => $user->email,
+                        'image' => $user->image,
+                        'bio' => $user->bio,
+                        'created_at' => $user->created_at,
+                    ];
+                }),
+                'posts' => $results['posts']->filter(),
+                'tags' => $results['tags']->map(function ($tag) {
+                    return [
+                        'id' => $tag->id,
+                        'type' => 'tag',
+                        'tag_name' => $tag->tag_name,
+                        'created_at' => $tag->created_at,
+                    ];
+                }),
+            ];
+
+            return response()->json([
                 'success' => true,
                 'query' => $query,
                 'is_tag_search' => $isTagSearch,
                 'type' => $type,
-                'results' => $results,
-                'users_count' => $results['users']->count(),
-                'posts_count' => $results['posts']->count(),
-                'tags_count' => $results['tags']->count(),
-                'total' => $results['users']->count() + 
-                          $results['posts']->count() + 
-                          $results['tags']->count()
-            ];
-
-            Log::info('Search response:', $response);
-            
-            return response()->json($response);
+                'results' => $formattedResults,
+                'users_count' => $formattedResults['users']->count(),
+                'posts_count' => $formattedResults['posts']->count(),
+                'tags_count' => $formattedResults['tags']->count(),
+                'total' => $formattedResults['users']->count() + 
+                          $formattedResults['posts']->count() + 
+                          $formattedResults['tags']->count()
+            ]);
 
         } catch (\Exception $e) {
-            // 👇 **سجل الخطأ في سجلات Laravel للتحقق منه**
-            Log::error('SearchController Error: ' . $e->getMessage(), [
-                'query' => $query ?? 'null',
-                'type' => $type ?? 'null',
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            
             return response()->json([
                 'success' => false,
-                'message' => 'Search failed: ' . ($e->getMessage()),
+                'message' => 'Search failed: ' . $e->getMessage(),
                 'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
 
     /**
-     * Quick search for suggestions
+     * دالة مساعدة لإضافة اللايكات والتعليقات للبوست
      */
-    public function quickSearch(Request $request): JsonResponse
+    private function formatPostWithCounts($post)
     {
         try {
-            $query = $request->input('q', '');
+            // الحصول على عدد اللايكات والتعليقات بشكل منفصل
+            $likesCount = DB::table('likes')->where('post_id', $post->id)->count();
+            $commentsCount = DB::table('comments')->where('post_id', $post->id)->count();
             
-            if (empty($query)) {
-                return response()->json([
-                    'success' => true,
-                    'query' => $query,
-                    'results' => []
-                ]);
-            }
-
-            // ⭐ **تحقق إذا كان البحث عن تاغ (يبدأ بـ #)**
-            $isTagSearch = str_starts_with($query, '#');
-            
-            // 👇 **تهيئة النتائج أولاً**
-            $results = [
-                'users' => collect(),
-                'posts' => collect(),
-                'tags' => collect()
+            return [
+                'id' => $post->id,
+                'type' => 'post',
+                'title' => $post->title ?? '',
+                'caption' => $post->caption ?? '',
+                'content' => $post->content ?? ($post->caption ?? ''),
+                'user' => $post->user ? [
+                    'id' => $post->user->id,
+                    'full_name' => $post->user->full_name ?? 'Unknown',
+                    'image' => $post->user->image,
+                ] : null,
+                'tags' => $post->tags ? $post->tags->map(function ($tag) {
+                    return [
+                        'id' => $tag->id,
+                        'tag_name' => $tag->tag_name,
+                    ];
+                })->toArray() : [],
+                'images' => $post->images ?? [],
+                'created_at' => $post->created_at,
+                'updated_at' => $post->updated_at,
+                'likes_count' => $likesCount,
+                'comments_count' => $commentsCount,
+                '_count' => [
+                    'likes' => $likesCount,
+                    'comments' => $commentsCount,
+                ]
             ];
+        } catch (\Exception $e) {
+            Log::warning('Error formatting post ' . $post->id . ': ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+ * Quick search for suggestions - نسخة تعمل بدون أخطاء
+ */
+public function quickSearch(Request $request): JsonResponse
+{
+    try {
+        $query = $request->input('q', '');
+        
+        if (empty($query)) {
+            return response()->json([
+                'success' => true,
+                'query' => $query,
+                'results' => []
+            ]);
+        }
+        
+        $isTagSearch = str_starts_with($query, '#');
+        
+        if ($isTagSearch) {
+            $tagName = substr($query, 1);
             
-            if ($isTagSearch) {
-                $tagName = substr($query, 1);
+            $tags = Tag::where('tag_name', 'LIKE', "%{$tagName}%")
+                ->select(['id', 'tag_name'])
+                ->limit(5)
+                ->get()
+                ->map(function ($tag) {
+                    return [
+                        'id' => $tag->id,
+                        'tag_name' => $tag->tag_name
+                    ];
+                })
+                ->values() // ⭐ أضف values() هنا
+                ->all();
+            
+            return response()->json([
+                'success' => true,
+                'query' => $query,
+                'is_tag_search' => $isTagSearch,
+                'results' => [
+                    'users' => [],
+                    'posts' => [],
+                    'tags' => $tags
+                ]
+            ]);
+        } else {
+            // 🔍 **المستخدمين**
+            $users = User::where('full_name', 'LIKE', "%{$query}%")
+                ->select(['id', 'full_name', 'image', 'email'])
+                ->limit(3)
+                ->get()
+                ->map(function ($user) {
+                    return [
+                        'id' => $user->id,
+                        'full_name' => $user->full_name,
+                        'image' => $user->image,
+                        'email' => $user->email
+                    ];
+                })
+                ->values() // ⭐ أضف values() هنا
+                ->all();
                 
-                $results['tags'] = Tag::where('tag_name', 'LIKE', "%{$tagName}%")
-                    ->select(['id', 'tag_name'])
-                    ->limit(5)
-                    ->get()
-                    ->map(function ($tag) {
-                        $tag->display_name = '#' . $tag->tag_name;
-                        return $tag;
-                    });
-            } else {
-                $results['users'] = User::where('full_name', 'LIKE', "%{$query}%")
-                    ->select(['id', 'full_name', 'image'])
-                    ->limit(3)
-                    ->get();
+            // 🔍 **البوستات - التعديل المهم!**
+            $posts = Post::where('title', 'LIKE', "%{$query}%")
+                ->orWhere('caption', 'LIKE', "%{$query}%")
+                ->select(['id', 'title', 'caption', 'user_id', 'created_at'])
+                ->with('user:id,full_name,image') // ⭐ تأكد من with
+                ->limit(3)
+                ->get()
+                ->map(function ($post) {
+                    // ⭐ تأكد من إضافة بيانات المستخدم
+                    $userData = null;
+                    if ($post->user) {
+                        $userData = [
+                            'id' => $post->user->id,
+                            'full_name' => $post->user->full_name,
+                            'image' => $post->user->image
+                        ];
+                    } elseif ($post->user_id) {
+                        // إذا فشل with، جلب المستخدم يدوياً
+                        $user = User::find($post->user_id);
+                        if ($user) {
+                            $userData = [
+                                'id' => $user->id,
+                                'full_name' => $user->full_name,
+                                'image' => $user->image
+                            ];
+                        }
+                    }
                     
-                $results['posts'] = Post::where(function ($queryBuilder) use ($query) {
-                        $queryBuilder->where('title', 'LIKE', "%{$query}%")
-                                     ->orWhere('caption', 'LIKE', "%{$query}%");
-                    })
-                    ->select(['id', 'title', 'user_id', 'caption'])
-                    ->with('user:id,full_name,image')
-                    ->limit(3)
-                    ->get();
-                    
-                $results['tags'] = Tag::where('tag_name', 'LIKE', "%{$query}%")
-                    ->select(['id', 'tag_name'])
-                    ->limit(3)
-                    ->get()
-                    ->map(function ($tag) {
-                        $tag->display_name = '#' . $tag->tag_name;
-                        return $tag;
-                    });
-            }
+                    return [
+                        'id' => $post->id,
+                        'title' => $post->title,
+                        'caption' => $post->caption,
+                        'user_id' => $post->user_id,
+                        'created_at' => $post->created_at,
+                        'user' => $userData, // ⭐ تأكد من إضافة user هنا
+                        'type' => 'post',
+                    ];
+                })
+                ->values() // ⭐ أضف values() هنا
+                ->all();
+                
+            // 🔍 **التاغات**
+            $tags = Tag::where('tag_name', 'LIKE', "%{$query}%")
+                ->select(['id', 'tag_name'])
+                ->limit(3)
+                ->get()
+                ->map(function ($tag) {
+                    return [
+                        'id' => $tag->id,
+                        'tag_name' => $tag->tag_name
+                    ];
+                })
+                ->values() // ⭐ أضف values() هنا
+                ->all();
 
             return response()->json([
                 'success' => true,
                 'query' => $query,
                 'is_tag_search' => $isTagSearch,
-                'results' => $results
+                'results' => [
+                    'users' => $users,
+                    'posts' => $posts,
+                    'tags' => $tags
+                ]
             ]);
-
-        } catch (\Exception $e) {
-            Log::error('QuickSearchController Error: ' . $e->getMessage(), [
-                'query' => $query ?? 'null'
-            ]);
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Quick search failed',
-                'error' => config('app.debug') ? $e->getMessage() : null
-            ], 500);
         }
+
+    } catch (\Exception $e) {
+        // ⭐ أضف log للخطأ
+        \Illuminate\Support\Facades\Log::error('Quick search error: ' . $e->getMessage(), [
+            'query' => $query ?? 'null',
+            'trace' => $e->getTraceAsString()
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Quick search failed'
+        ], 500);
     }
+}
 }
