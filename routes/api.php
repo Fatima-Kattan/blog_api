@@ -20,10 +20,10 @@ Route::prefix('v1')->group(function () {
     Route::get('/posts', [PostController::class, 'index']);
 
     // 🔍 روتات البحث (بدون مصادقة) ← أضف هنا
-    
+
     Route::get('/search', [SearchController::class, 'search']);
     Route::get('/search/quick', [SearchController::class, 'quickSearch']);
-    
+
 
     Route::prefix('comments')->group(function () {
         Route::get('/', [CommentController::class, 'index']);
@@ -57,6 +57,10 @@ Route::prefix('v1')->group(function () {
         Route::get('/posts/user/{userId}', [PostController::class, 'userPosts']);
         Route::get('/my/posts', [PostController::class, 'myPosts']);
 
+        Route::get('/user/{userId}/stats', [PostController::class, 'getUserStats']);
+        Route::get('/user/{userId}/posts/filter', [PostController::class, 'filterUserPosts']);
+        // ⭐ الروت الجديد للفلتر (لصفحة My Posts)
+        // Route::get('/user/{userId}/filtered-posts', [PostController::class, 'getFilteredUserPosts']);
         Route::post('/validate-images', [PostController::class, 'validateImageUrls']);
         Route::get('/posts/{post}/image-count', [PostController::class, 'getImageCount']);
 
@@ -73,7 +77,7 @@ Route::prefix('v1')->group(function () {
         Route::get('users/{id}/followers', [FollowController::class, 'followers']);
         Route::get('users/{id}/followings', [FollowController::class, 'followings']);
         Route::get('/users/{id}/not-followings', [FollowController::class, 'notFollowings']);
-        
+
         //الاشعارات
         Route::get('/notifications', [NotificationController::class, 'index']);
         Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
@@ -88,7 +92,7 @@ Route::prefix('v1')->group(function () {
             Route::delete('/{postId}/{tagId}', [PostTagController::class, 'destroy']);
             Route::put('/{postId}/sync', [PostTagController::class, 'sync']);
         });
-        
+
         Route::prefix('comments')->group(function () {
             Route::post('/', [CommentController::class, 'store']);
             Route::put('/{id}', [CommentController::class, 'update']);
@@ -96,12 +100,12 @@ Route::prefix('v1')->group(function () {
             Route::get('/my/comments', [CommentController::class, 'myComments']);
         });
     });
-    
+
     Route::get('/likes', [LikeController::class, 'index']);
     Route::get('/posts/{postId}/likes', [LikeController::class, 'getPostLikes']);
     Route::get('/users/{userId}/likes', [LikeController::class, 'getUserLikes']);
     Route::get('/posts/{postId}/likes-count', [LikeController::class, 'getLikesCount']);
-    
+
     Route::prefix('post-tags')->group(function () {
         Route::get('/{postId}', [PostTagController::class, 'index']);
         Route::get('/tag/{tagId}/posts', [PostTagController::class, 'postsByTag']);

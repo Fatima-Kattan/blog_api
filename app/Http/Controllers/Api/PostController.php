@@ -664,6 +664,234 @@ public function search(Request $request)
             ], 500);
         }
     }
-    
+    /**
+ * إحصائيات المنشورات لمستخدم معين
+ */
+public function getUserStats($userId)
+{
+    try {
+        // التحقق من وجود المستخدم
+        $user = User::find($userId);
+        
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'المستخدم غير موجود'
+            ], 404);
+        }
+
+        // جلب إحصائيات دقيقة من قاعدة البيانات
+        $stats = [
+            'total_posts' => Post::where('user_id', $userId)->count(),
+            
+            // عدد الإعجابات في أعلى منشور
+            'most_liked' => Post::withCount('likes')
+                ->where('user_id', $userId)
+                ->orderBy('likes_count', 'desc')
+                ->value('likes_count') ?? 0,
+            
+            // عدد المنشورات الجديدة (آخر 7 أيام)
+            'latest_post' => Post::where('user_id', $userId)
+                ->where('created_at', '>=', now()->subDays(7))
+                ->count(),
+            
+            // مجموع التعليقات على جميع منشوراته
+            'total_comments' => DB::table('comments')
+                ->join('posts', 'comments.post_id', '=', 'posts.id')
+                ->where('posts.user_id', $userId)
+                ->count(),
+        ];
+
+        // الحصول على أعلى منشور إعجاباً (تفاصيل إضافية)
+        $topPost = Post::withCount('likes')
+            ->where('user_id', $userId)
+            ->orderBy('likes_count', 'desc')
+            ->first();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'stats' => $stats,
+                'user_info' => [
+                    'id' => $user->id,
+                    'full_name' => $user->full_name,
+                    'image' => $user->image
+                ],
+                'top_post' => $topPost ? [
+                    'id' => $topPost->id,
+                    'title' => $topPost->title,
+                    'likes_count' => $topPost->likes_count
+                ] : null
+            ],
+            'message' => 'تم جلب الإحصائيات بنجاح'
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'حدث خطأ في جلب الإحصائيات',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+
+public function filterUserPosts(Request $request, $userId)
+{
+    try {
+        $user = User::find($userId);
+        
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'المستخدم غير موجود'
+            ], 404);
+        }
+
+        $validated = $request->validate([
+            'filter' => 'sometimes|in:all,popular,recent,commented',
+            'sort' => 'sometimes|in:newest,oldest,popular,comments',
+            'page' => 'sometimes|integer|min:1',
+            'limit' => 'sometimes|integer|min:1|max:50'
+        ]);
+
+        $filter = $validated['filter'] ?? 'all';
+        $sort = $validated['sort'] ?? 'newest';
+        $page = $validated['page'] ?? 1;
+        $limit = $validated['limit'] ?? 10; // ⭐ عدل إلى 10
+        
+        $query = Post::with([
+            'user:id,full_name,image',
+            'likes.user:id,full_name',
+            'comments.user:id,full_name',
+            'tags'
+        ])->withCount(['likes', 'comments'])
+          ->where('user_id', $userId);
+
+        // تطبيق الفلتر
+        switch ($filter) {
+            case 'popular':
+                $query->orderBy('likes_count', 'desc');
+                break;
+            case 'commented':
+                $query->orderBy('comments_count', 'desc');
+                break;
+            case 'recent':
+                $query->where('created_at', '>=', now()->subDays(7));
+                break;
+        }
+
+        // تطبيق الترتيب
+        switch ($sort) {
+            case 'oldest':
+                $query->orderBy('created_at', 'asc');
+                break;
+            case 'popular':
+                $query->orderBy('likes_count', 'desc');
+                break;
+            case 'comments':
+                $query->orderBy('comments_count', 'desc');
+                break;
+            default: // newest
+                $query->orderBy('created_at', 'desc');
+                break;
+        }
+
+        // ترتيب ثانوي
+        $query->orderBy('id', 'desc');
+
+        $posts = $query->paginate($limit, ['*'], 'page', $page);
+
+        return response()->json([
+            'success' => true,
+            'filter' => $filter,
+            'sort' => $sort,
+            'data' => $posts->items(),
+            'current_page' => $posts->currentPage(),
+            'last_page' => $posts->lastPage(),
+            'total' => $posts->total(),
+            'per_page' => $posts->perPage(),
+            'has_more' => $posts->hasMorePages(), // ⭐ مهم للـ infinite scroll
+            'message' => 'تم جلب المنشورات بنجاح'
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'حدث خطأ في التصفية',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+// public function getFilteredUserPosts(Request $request, $userId)
+// {
+//     try {
+//         $user = User::find($userId);
+        
+//         if (!$user) {
+//             return response()->json([
+//                 'success' => false,
+//                 'message' => 'المستخدم غير موجود'
+//             ], 404);
+//         }
+
+//         $validated = $request->validate([
+//             'filter' => 'sometimes|in:all,popular,recent,commented',
+//             'sort' => 'sometimes|in:newest,oldest,popular,comments',
+//             'page' => 'sometimes|integer|min:1',
+//             'limit' => 'sometimes|integer|min:1|max:50'
+//         ]);
+
+//         $filter = $validated['filter'] ?? 'all';
+//         $sort = $validated['sort'] ?? 'newest';
+//         $limit = $validated['limit'] ?? 10;
+        
+//         $query = Post::with([
+//             'user:id,full_name,image',
+//             'likes.user:id,full_name',
+//             'comments.user:id,full_name',
+//             'tags'
+//         ])->withCount(['likes', 'comments'])
+//           ->where('user_id', $userId);
+
+//         // ⭐ الفلتر
+//         if ($filter === 'popular') {
+//             $query->orderBy('likes_count', 'desc');
+//         } elseif ($filter === 'commented') {
+//             $query->orderBy('comments_count', 'desc');
+//         } elseif ($filter === 'recent') {
+//             $query->where('created_at', '>=', now()->subDays(7));
+//             $query->orderBy('created_at', 'desc');
+//         }
+
+//         // ⭐ الترتيب
+//         if ($sort === 'oldest') {
+//             $query->orderBy('created_at', 'asc');
+//         } elseif ($sort === 'popular') {
+//             $query->orderBy('likes_count', 'desc');
+//         } elseif ($sort === 'comments') {
+//             $query->orderBy('comments_count', 'desc');
+//         } else { // newest (default)
+//             $query->orderBy('created_at', 'desc');
+//         }
+
+//         $posts = $query->paginate($limit);
+
+//         return response()->json([
+//             'success' => true,
+//             'filter' => $filter,
+//             'sort' => $sort,
+//             'total_results' => $posts->total(),
+//             'data' => $posts, // ⭐ هون بدك ترجع الـ pagination object كامل
+//             'message' => 'تم جلب المنشورات بنجاح'
+//         ]);
+        
+//     } catch (\Exception $e) {
+//         return response()->json([
+//             'success' => false,
+//             'message' => 'حدث خطأ في جلب المنشورات',
+//             'error' => $e->getMessage()
+//         ], 500);
+//     }
+// }
 
 }
